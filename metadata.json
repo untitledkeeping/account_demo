@@ -1,0 +1,7 @@
+{
+  "name": "Studio Books",
+  "description": "Firm-first multi-client bookkeeping platform with immutable double-entry ledger, Canadian sales tax engine (GST/HST/QST), bank feed reconciliation, receipt OCR ingestion, and financial reporting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
