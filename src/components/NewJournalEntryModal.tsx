@@ -169,9 +169,15 @@ export const NewJournalEntryModal: React.FC<NewJournalEntryModalProps> = ({
                 {client.legalName}
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Enforces balanced double-entry (Debits === Credits) with Canadian tax deconstruction.
-            </p>
+            <div className="flex items-center space-x-2 mt-1">
+              <p className="text-xs text-slate-500">
+                Enforces balanced double-entry (Debits === Credits) with Canadian tax deconstruction.
+              </p>
+              <span className="text-slate-300">•</span>
+              <div className="flex items-center space-x-1 text-xs text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded font-medium border border-emerald-200">
+                <span>Bookkeeper: <strong>{currentUser.fullName}</strong></span>
+              </div>
+            </div>
           </div>
 
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   FileCheck2,
   Download,
@@ -10,34 +10,57 @@ import {
   AlertCircle,
   HelpCircle,
   FileSpreadsheet,
+  AlertTriangle,
+  PenLine,
+  User as UserIcon,
+  Check,
 } from 'lucide-react';
-import { ClientBusiness, ChartOfAccount, JournalEntry } from '../types';
-import { generateSalesTaxSummary } from '../utils/ledgerEngine';
+import { ClientBusiness, ChartOfAccount, JournalEntry, User } from '../types';
 import { formatCurrency } from '../utils/taxCalculator';
+import { useCanadianTax } from '../hooks/useCanadianTax';
 
 interface CanadianTaxReportsViewProps {
   client: ClientBusiness;
   accounts: ChartOfAccount[];
   entries: JournalEntry[];
+  currentUser?: User;
 }
 
 export const CanadianTaxReportsView: React.FC<CanadianTaxReportsViewProps> = ({
   client,
   accounts,
   entries,
+  currentUser,
 }) => {
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('2026-Q2');
-  const [isExported, setIsExported] = useState(false);
-
-  const summary = generateSalesTaxSummary(client, accounts, entries, selectedPeriod);
-
-  const handleExport = () => {
-    setIsExported(true);
-    setTimeout(() => setIsExported(false), 3000);
-  };
+  const {
+    selectedPeriod,
+    setSelectedPeriod,
+    summary,
+    audit,
+    isExported,
+    handleExport,
+    filingDeclaration,
+    isDeclarationModalOpen,
+    setIsDeclarationModalOpen,
+    signAndFileReturn,
+    successToast,
+  } = useCanadianTax({
+    client,
+    accounts,
+    entries,
+    currentUser,
+  });
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      {/* Toast Notification */}
+      {successToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl border border-emerald-500/40 flex items-center space-x-3 text-xs font-semibold animate-in fade-in slide-in-from-bottom-3">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{successToast}</span>
+        </div>
+      )}
+
       {/* Header Context */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -55,7 +78,7 @@ export const CanadianTaxReportsView: React.FC<CanadianTaxReportsViewProps> = ({
         </div>
 
         {/* Controls */}
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-3">
           <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
@@ -69,22 +92,56 @@ export const CanadianTaxReportsView: React.FC<CanadianTaxReportsViewProps> = ({
 
           <button
             onClick={handleExport}
-            className="flex items-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-sm"
+            className="flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-3.5 py-2 rounded-xl text-xs transition-all border border-slate-200"
           >
             {isExported ? (
               <>
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Worksheet Exported!</span>
               </>
             ) : (
               <>
-                <Download className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Export Official PDF</span>
+                <Download className="w-3.5 h-3.5 text-slate-600" />
+                <span>Export PDF</span>
               </>
             )}
           </button>
+
+          <button
+            onClick={() => setIsDeclarationModalOpen(true)}
+            className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-md shadow-emerald-600/20"
+          >
+            <PenLine className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Sign & File Return</span>
+          </button>
         </div>
       </div>
+
+      {/* Official Certified Filing Banner if filed */}
+      {filingDeclaration && (
+        <div className="bg-emerald-900 text-white rounded-2xl p-5 border border-emerald-700 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-700 flex items-center justify-center">
+              <ShieldCheck className="w-6 h-6 text-emerald-200" />
+            </div>
+            <div>
+              <div className="text-xs uppercase font-bold tracking-wider text-emerald-300">
+                Official Electronic Filing Certification
+              </div>
+              <div className="text-sm font-bold text-white">
+                Filed for {filingDeclaration.period} by {filingDeclaration.signedBy} ({filingDeclaration.role})
+              </div>
+              <div className="text-[11px] text-emerald-200 font-mono mt-0.5">
+                CRA / RQ Confirmation Token: {filingDeclaration.confirmationNumber}
+              </div>
+            </div>
+          </div>
+
+          <div className="text-right text-xs text-emerald-200">
+            Certified: {new Date(filingDeclaration.confirmedAt).toLocaleDateString()}
+          </div>
+        </div>
+      )}
 
       {/* Tax Remittance Summary Banner */}
       <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 text-white border border-slate-700 shadow-lg flex flex-col md:flex-row md:items-center md:justify-between gap-6">
@@ -118,6 +175,19 @@ export const CanadianTaxReportsView: React.FC<CanadianTaxReportsViewProps> = ({
         </div>
       </div>
 
+      {/* Audit Readiness Warnings */}
+      {audit.warnings.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-1 text-xs text-amber-900">
+          <div className="font-bold flex items-center space-x-1.5">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>Filing Verification Notice</span>
+          </div>
+          {audit.warnings.map((w, i) => (
+            <div key={i} className="pl-6">• {w}</div>
+          ))}
+        </div>
+      )}
+
       {/* Official Filing Return Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Federal GST/HST Worksheet (CRA) */}
@@ -138,44 +208,38 @@ export const CanadianTaxReportsView: React.FC<CanadianTaxReportsViewProps> = ({
           </div>
 
           <div className="divide-y divide-slate-100 text-xs">
-            <div className="py-3 flex justify-between items-center">
+            <div className="py-2.5 flex justify-between items-center">
               <div>
-                <div className="font-semibold text-slate-800">Line 101: Total Taxable Sales & Revenues</div>
-                <div className="text-[11px] text-slate-400">Gross operating sales before taxes</div>
+                <div className="font-bold text-slate-800">Line 101 - Total Sales & Other Revenue</div>
+                <div className="text-[11px] text-slate-500">Gross revenue for reporting period</div>
               </div>
-              <div className="font-mono font-bold text-slate-900">
-                {formatCurrency(summary.gst.line101SalesTotal)}
-              </div>
+              <span className="font-mono font-bold text-slate-900">{formatCurrency(summary.gst.line101SalesTotal)}</span>
             </div>
 
-            <div className="py-3 flex justify-between items-center">
+            <div className="py-2.5 flex justify-between items-center">
               <div>
-                <div className="font-semibold text-slate-800">Line 105: Total GST/HST Collected</div>
-                <div className="text-[11px] text-slate-400">Tax charged to clients on sales</div>
+                <div className="font-bold text-slate-800">Line 105 - Total GST/HST Collected</div>
+                <div className="text-[11px] text-slate-500">Output tax on customer billings</div>
               </div>
-              <div className="font-mono font-bold text-emerald-700">
-                {formatCurrency(summary.gst.line105GstCollected)}
-              </div>
+              <span className="font-mono font-bold text-emerald-700">{formatCurrency(summary.gst.line105GstCollected)}</span>
             </div>
 
-            <div className="py-3 flex justify-between items-center">
+            <div className="py-2.5 flex justify-between items-center">
               <div>
-                <div className="font-semibold text-slate-800">Line 108: Input Tax Credits (ITCs) Claimed</div>
-                <div className="text-[11px] text-slate-400">GST paid on qualifying business expenses & supplies</div>
+                <div className="font-bold text-slate-800">Line 108 - Input Tax Credits (ITCs)</div>
+                <div className="text-[11px] text-slate-500">GST paid on qualifying business purchases</div>
               </div>
-              <div className="font-mono font-bold text-rose-700">
-                ({formatCurrency(summary.gst.line108ItcsClaimed)})
-              </div>
+              <span className="font-mono font-bold text-rose-600">({formatCurrency(summary.gst.line108ItcsClaimed)})</span>
             </div>
 
-            <div className="py-3.5 flex justify-between items-center bg-slate-50/80 -mx-6 px-6 font-bold border-t border-slate-200">
+            <div className="py-3 flex justify-between items-center bg-slate-50 px-3 rounded-xl font-bold">
               <div>
-                <div className="text-slate-900 text-sm">Line 109: Net Federal GST Payable / (Refund)</div>
-                <div className="text-[11px] text-slate-500 font-normal">Line 105 minus Line 108</div>
+                <div className="text-slate-900">Line 109 - Net GST/HST Payable / (Refund)</div>
+                <div className="text-[10px] text-slate-500 font-normal">Line 105 minus Line 108</div>
               </div>
-              <div className="font-mono text-base text-emerald-700">
+              <span className={`font-mono text-sm ${summary.gst.line109NetGstPayable >= 0 ? 'text-slate-900' : 'text-emerald-600'}`}>
                 {formatCurrency(summary.gst.line109NetGstPayable)}
-              </div>
+              </span>
             </div>
           </div>
         </div>
@@ -190,77 +254,116 @@ export const CanadianTaxReportsView: React.FC<CanadianTaxReportsViewProps> = ({
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-slate-900">QST Return (Form VDZ-471)</h3>
-                  <p className="text-[11px] text-slate-500">Registration: {client.qstNumber || 'Active'}</p>
+                  <p className="text-[11px] text-slate-500">Registration: {client.qstNumber || '1092847291TQ0001'}</p>
                 </div>
               </div>
-              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-blue-50 text-blue-700">
                 Québec 9.975%
               </span>
             </div>
 
             <div className="divide-y divide-slate-100 text-xs">
-              <div className="py-3 flex justify-between items-center">
+              <div className="py-2.5 flex justify-between items-center">
                 <div>
-                  <div className="font-semibold text-slate-800">Line 201: Total Taxable Sales in Québec</div>
-                  <div className="text-[11px] text-slate-400">Total revenue subject to QST</div>
+                  <div className="font-bold text-slate-800">Line 201 - Total Québec Taxable Sales</div>
+                  <div className="text-[11px] text-slate-500">Taxable revenue in province of Québec</div>
                 </div>
-                <div className="font-mono font-bold text-slate-900">
-                  {formatCurrency(summary.qst.line201SalesTotal)}
-                </div>
+                <span className="font-mono font-bold text-slate-900">{formatCurrency(summary.qst.line201SalesTotal)}</span>
               </div>
 
-              <div className="py-3 flex justify-between items-center">
+              <div className="py-2.5 flex justify-between items-center">
                 <div>
-                  <div className="font-semibold text-slate-800">Line 205: Total QST Collected</div>
-                  <div className="text-[11px] text-slate-400">9.975% provincial sales tax collected</div>
+                  <div className="font-bold text-slate-800">Line 205 - Total QST Collected</div>
+                  <div className="text-[11px] text-slate-500">9.975% output tax on sales</div>
                 </div>
-                <div className="font-mono font-bold text-blue-700">
-                  {formatCurrency(summary.qst.line205QstCollected)}
-                </div>
+                <span className="font-mono font-bold text-blue-700">{formatCurrency(summary.qst.line205QstCollected)}</span>
               </div>
 
-              <div className="py-3 flex justify-between items-center">
+              <div className="py-2.5 flex justify-between items-center">
                 <div>
-                  <div className="font-semibold text-slate-800">Line 208: Input Tax Refunds (ITRs) Claimed</div>
-                  <div className="text-[11px] text-slate-400">QST paid on qualifying operating expenses</div>
+                  <div className="font-bold text-slate-800">Line 208 - Input Tax Refunds (ITRs)</div>
+                  <div className="text-[11px] text-slate-500">QST paid on qualifying expenses</div>
                 </div>
-                <div className="font-mono font-bold text-rose-700">
-                  ({formatCurrency(summary.qst.line208ItrsClaimed)})
-                </div>
+                <span className="font-mono font-bold text-rose-600">({formatCurrency(summary.qst.line208ItrsClaimed)})</span>
               </div>
 
-              <div className="py-3.5 flex justify-between items-center bg-slate-50/80 -mx-6 px-6 font-bold border-t border-slate-200">
+              <div className="py-3 flex justify-between items-center bg-slate-50 px-3 rounded-xl font-bold">
                 <div>
-                  <div className="text-slate-900 text-sm">Line 209: Net Québec QST Payable / (Refund)</div>
-                  <div className="text-[11px] text-slate-500 font-normal">Line 205 minus Line 208</div>
+                  <div className="text-slate-900">Line 209 - Net QST Payable / (Refund)</div>
+                  <div className="text-[10px] text-slate-500 font-normal">Line 205 minus Line 208</div>
                 </div>
-                <div className="font-mono text-base text-blue-700">
+                <span className={`font-mono text-sm ${summary.qst.line209NetQstPayable >= 0 ? 'text-slate-900' : 'text-emerald-600'}`}>
                   {formatCurrency(summary.qst.line209NetQstPayable)}
-                </div>
+                </span>
               </div>
             </div>
           </div>
         ) : (
-          <div className="bg-slate-50 rounded-2xl border border-slate-200 p-6 flex flex-col items-center justify-center text-center">
-            <Building className="w-10 h-10 text-slate-300 mb-2" />
-            <h3 className="text-sm font-bold text-slate-800">Not Registered for Québec QST</h3>
-            <p className="text-xs text-slate-500 mt-1 max-w-xs">
-              {client.legalName} is domiciled in {client.provinceCode}. Canadian HST/GST rules apply without provincial QST returns.
+          <div className="bg-slate-50 rounded-2xl border border-slate-200 p-6 flex flex-col items-center justify-center text-center space-y-2">
+            <Building className="w-10 h-10 text-slate-300" />
+            <h3 className="font-bold text-sm text-slate-800">No Provincial Sales Tax Filing</h3>
+            <p className="text-xs text-slate-500 max-w-xs">
+              {client.legalName} is located in {client.provinceCode}, where sales taxes are governed solely under federal Harmonized Sales Tax (HST) rules.
             </p>
           </div>
         )}
       </div>
 
-      {/* Compliance Audit Note */}
-      <div className="bg-white rounded-xl p-4 border border-slate-200 flex items-start space-x-3 text-xs text-slate-600">
-        <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-        <div>
-          <div className="font-bold text-slate-800">CRA & Revenu Québec Audit Compliance Guarantee</div>
-          <p className="mt-0.5 text-slate-500">
-            Every dollar in Line 108 (ITCs) and Line 208 (ITRs) is linked directly to immutable, double-entry journal records and verified receipt documents with registered BN9/NEQ numbers.
-          </p>
+      {/* Declaration Signature Modal */}
+      {isDeclarationModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center space-x-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-bold text-sm text-slate-900">Sign & Certify Tax Return</h3>
+              </div>
+              <button
+                onClick={() => setIsDeclarationModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5">
+                <div className="text-slate-500">Filing Entity: <strong className="text-slate-900">{client.legalName}</strong></div>
+                <div className="text-slate-500">Period: <strong className="text-slate-900">{selectedPeriod}</strong></div>
+                <div className="text-slate-500">Combined Remittance: <strong className="text-emerald-700 font-mono">{formatCurrency(summary.totalRemittanceDue)}</strong></div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700">Authorizing Bookkeeper Signature</label>
+                <div className="flex items-center space-x-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                  <UserIcon className="w-4 h-4 text-emerald-600" />
+                  <span className="font-semibold text-slate-900">{currentUser?.fullName || 'Senior Accountant'}</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-500">({currentUser?.role || 'staff'})</span>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-slate-500">
+                By certifying, you attest that the ITCs and ITRs claimed correspond to legitimate business expenditures substantiated by supporting documents in accordance with the Excise Tax Act (CRA) and the Quebec Taxation Act (RQ).
+              </p>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setIsDeclarationModalOpen(false)}
+                className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-semibold text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={signAndFileReturn}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs shadow-md shadow-emerald-600/20"
+              >
+                Confirm & Sign Return
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

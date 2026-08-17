@@ -17,9 +17,16 @@ import {
   ArrowRightLeft,
   User as UserIcon,
   ShieldCheck,
+  Download,
+  Check,
+  ChevronsUpDown,
+  UserCheck,
+  Briefcase,
+  History,
 } from 'lucide-react';
 import { ClientBusiness, JournalEntry, ChartOfAccount, User } from '../types';
 import { formatCurrency } from '../utils/taxCalculator';
+import { useGeneralLedger } from '../hooks/useGeneralLedger';
 
 interface GeneralLedgerViewProps {
   client: ClientBusiness;
@@ -38,48 +45,46 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
   onOpenNewEntry,
   onReverseEntry,
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sourceFilter, setSourceFilter] = useState<string>('ALL');
-  const [authorFilter, setAuthorFilter] = useState<'ALL' | 'MINE'>('ALL');
-  const [expandedEntries, setExpandedEntries] = useState<Record<string, boolean>>({});
+  const {
+    searchTerm,
+    setSearchTerm,
+    sourceFilter,
+    setSourceFilter,
+    authorFilter,
+    setAuthorFilter,
+    showReversalsOnly,
+    setShowReversalsOnly,
+    expandedEntries,
+    toggleExpand,
+    expandAll,
+    collapseAll,
+    accountMap,
+    uniqueAuthors,
+    staffStats,
+    filteredEntries,
+    grandTotalDebits,
+    grandTotalCredits,
+    isBalanced,
+    executeReversalWithCurrentUser,
+    isAuthoredByCurrentUser,
+    exportLedgerToCSV,
+  } = useGeneralLedger({
+    client,
+    entries,
+    accounts,
+    currentUser,
+    onReverseEntry,
+  });
 
-  const toggleExpand = (id: string) => {
-    setExpandedEntries((prev) => ({ ...prev, [id]: !prev[id] }));
+  const [reversalCandidate, setReversalCandidate] = useState<JournalEntry | null>(null);
+  const [reversalReason, setReversalReason] = useState('');
+
+  const handleConfirmReversal = () => {
+    if (!reversalCandidate) return;
+    executeReversalWithCurrentUser(reversalCandidate, reversalReason || undefined);
+    setReversalCandidate(null);
+    setReversalReason('');
   };
-
-  const accountMap = new Map<string, ChartOfAccount>();
-  accounts.forEach((a) => accountMap.set(a.id, a));
-
-  // Compute Total Debits and Credits
-  let grandTotalDebits = 0;
-  let grandTotalCredits = 0;
-
-  const filteredEntries = entries.filter((entry) => {
-    const matchesSearch =
-      entry.memo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.entryNumber.toString().includes(searchTerm) ||
-      entry.lines.some((l) => l.description.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    const matchesSource = sourceFilter === 'ALL' || entry.source === sourceFilter;
-    const matchesAuthor =
-      authorFilter === 'ALL' ||
-      entry.createdBy.toLowerCase() === currentUser.fullName.toLowerCase();
-
-    return matchesSearch && matchesSource && matchesAuthor;
-  });
-
-  filteredEntries.forEach((entry) => {
-    if (entry.status === 'posted') {
-      entry.lines.forEach((line) => {
-        grandTotalDebits += line.debit;
-        grandTotalCredits += line.credit;
-      });
-    }
-  });
-
-  grandTotalDebits = Math.round(grandTotalDebits * 100) / 100;
-  grandTotalCredits = Math.round(grandTotalCredits * 100) / 100;
-  const isBalanced = Math.abs(grandTotalDebits - grandTotalCredits) < 0.01;
 
   const getSourceBadge = (source: string) => {
     switch (source) {
@@ -131,10 +136,10 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      {/* Client Subheader Context */}
+      {/* Client & Active Bookkeeper Context Header */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-xl font-bold text-slate-900">
               General Ledger (Double-Entry)
             </h1>
@@ -142,26 +147,42 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
               {client.legalName}
             </span>
           </div>
-          <div className="flex items-center space-x-2 mt-1">
-            <p className="text-xs text-slate-500">
-              Immutable journal entries enforcing debits === credits balance.
-            </p>
-            <span className="text-slate-300">•</span>
-            <div className="flex items-center space-x-1.5 text-xs text-slate-600 font-medium">
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-slate-600">
+            <div className="flex items-center space-x-1.5 bg-emerald-50 text-emerald-900 px-2.5 py-1 rounded-lg border border-emerald-200/80 font-medium">
               <UserIcon className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Active Bookkeeper: <strong className="text-slate-900">{currentUser.fullName}</strong></span>
-              <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 border border-slate-200">
+              <span>
+                Active Bookkeeper: <strong className="text-slate-900">{currentUser.fullName}</strong>
+              </span>
+              <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-emerald-200/60 text-emerald-900 border border-emerald-300/50">
                 {currentUser.role.replace('_', ' ')}
               </span>
             </div>
+
+            <span className="text-slate-300">•</span>
+
+            <span className="text-slate-500">
+              Assigned Client Lead:{' '}
+              <strong className="text-slate-800">{client.assignedBookkeeper || currentUser.fullName}</strong>
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
+        {/* Action Buttons */}
+        <div className="flex items-center space-x-3 self-start md:self-center">
+          <button
+            onClick={exportLedgerToCSV}
+            title="Download CSV report with complete staff creator attribution"
+            className="flex items-center space-x-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-colors border border-slate-200"
+          >
+            <Download className="w-3.5 h-3.5 text-slate-600" />
+            <span>Export CSV</span>
+          </button>
+
           <button
             id="post-journal-entry-main-btn"
             onClick={onOpenNewEntry}
-            className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all shadow-md shadow-emerald-600/20"
+            className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-md shadow-emerald-600/20"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>Post Balanced Entry</span>
@@ -169,107 +190,186 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
         </div>
       </div>
 
-      {/* Live Balance Verification Proof Card */}
-      <div className={`p-4 rounded-xl border flex flex-col sm:flex-row items-center justify-between gap-4 ${
-        isBalanced
-          ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
-          : 'bg-rose-50 border-rose-200 text-rose-950'
-      }`}>
-        <div className="flex items-center space-x-3">
-          {isBalanced ? (
-            <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-slate-950">
-              <CheckCircle2 className="w-5 h-5 text-white" />
-            </div>
-          ) : (
-            <div className="w-8 h-8 rounded-lg bg-rose-500 flex items-center justify-center text-white">
-              <AlertCircle className="w-5 h-5" />
-            </div>
-          )}
+      {/* Staff Audit Metrics & Live Mathematical Proof Card */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Metric 1: Current User Activity */}
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-xs font-bold uppercase tracking-wider text-emerald-800">
-              Double-Entry Mathematical Balance Proof
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              Entries by {currentUser.fullName.split(' ')[0]}
             </div>
-            <div className="text-xs text-emerald-700">
-              {isBalanced
-                ? 'All posted journal lines strictly satisfy the fundamental accounting equation.'
-                : 'Warning: Ledger imbalance detected. Please audit lines.'}
+            <div className="text-lg font-bold text-slate-900 mt-0.5">
+              {staffStats.currentUserEntriesCount}{' '}
+              <span className="text-xs font-normal text-slate-500">
+                of {staffStats.totalEntriesCount} total ({staffStats.totalEntriesCount > 0 ? Math.round((staffStats.currentUserEntriesCount / staffStats.totalEntriesCount) * 100) : 0}%)
+              </span>
             </div>
+            <div className="text-[11px] text-slate-500 mt-1 font-mono">
+              Volume: {formatCurrency(staffStats.currentUserDebitVolume)}
+            </div>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+            <UserCheck className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="flex items-center space-x-6 text-xs font-mono font-bold">
+        {/* Metric 2: Contributing Staff Team */}
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
           <div>
-            <span className="text-slate-500 font-sans font-normal">Debits: </span>
-            <span className="text-slate-900 font-bold">{formatCurrency(grandTotalDebits)}</span>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              Contributing Staff
+            </div>
+            <div className="text-lg font-bold text-slate-900 mt-0.5">
+              {uniqueAuthors.length}{' '}
+              <span className="text-xs font-normal text-slate-500">Bookkeepers</span>
+            </div>
+            <div className="text-[11px] text-slate-500 mt-1 truncate max-w-[200px]" title={uniqueAuthors.join(', ')}>
+              {uniqueAuthors.join(', ')}
+            </div>
           </div>
-          <div className="text-slate-300">=</div>
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+            <Briefcase className="w-5 h-5" />
+          </div>
+        </div>
+
+        {/* Metric 3: Mathematical Ledger Equality Balance */}
+        <div className={`p-4 rounded-xl border shadow-sm flex items-center justify-between ${
+          isBalanced
+            ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
+            : 'bg-rose-50 border-rose-200 text-rose-950'
+        }`}>
           <div>
-            <span className="text-slate-500 font-sans font-normal">Credits: </span>
-            <span className="text-slate-900 font-bold">{formatCurrency(grandTotalCredits)}</span>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 flex items-center space-x-1.5">
+              <span>Equation Status</span>
+              {isBalanced && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+            </div>
+            <div className="text-xs font-mono font-bold mt-1 text-slate-900">
+              Debits: {formatCurrency(grandTotalDebits)}
+            </div>
+            <div className="text-xs font-mono font-bold text-slate-900">
+              Credits: {formatCurrency(grandTotalCredits)}
+            </div>
           </div>
-          <span className="px-2.5 py-1 rounded bg-emerald-600 text-white font-sans text-[11px] font-bold">
-            Balanced
+          <span className={`px-2.5 py-1 rounded text-[11px] font-bold ${
+            isBalanced ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+          }`}>
+            {isBalanced ? 'Balanced' : 'Imbalanced'}
           </span>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search memo, entry #, line..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-colors"
-          />
-        </div>
+      {/* Filter and Search Controls */}
+      <div className="space-y-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          {/* Search Bar */}
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search memo, entry #, line description, or bookkeeper name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-colors"
+            />
+          </div>
 
-        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-          {/* Author Filter Toggle */}
-          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
+          {/* Quick Staff Filter Tabs */}
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs self-start md:self-auto">
             <button
               onClick={() => setAuthorFilter('ALL')}
-              className={`px-2.5 py-1 rounded-md font-medium transition-all ${
+              className={`px-3 py-1.5 rounded-md font-medium transition-all ${
                 authorFilter === 'ALL'
                   ? 'bg-white text-slate-900 shadow-sm font-semibold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              All Staff Entries
+              All Staff ({entries.length})
             </button>
             <button
               onClick={() => setAuthorFilter('MINE')}
-              className={`px-2.5 py-1 rounded-md font-medium transition-all flex items-center space-x-1 ${
+              className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center space-x-1.5 ${
                 authorFilter === 'MINE'
                   ? 'bg-emerald-600 text-white shadow-sm font-semibold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <UserIcon className="w-3 h-3" />
-              <span>My Entries</span>
+              <UserIcon className="w-3.5 h-3.5" />
+              <span>My Entries ({staffStats.currentUserEntriesCount})</span>
             </button>
           </div>
+        </div>
 
-          <div className="flex items-center space-x-2 text-xs text-slate-500">
-            <Filter className="w-3.5 h-3.5" />
-            <span>Source:</span>
+        {/* Secondary Filter Row */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 text-xs">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Specific Author Filter Dropdown */}
+            <div className="flex items-center space-x-1.5 text-slate-500">
+              <UserIcon className="w-3.5 h-3.5 text-slate-400" />
+              <span>Bookkeeper:</span>
+              <select
+                value={authorFilter}
+                onChange={(e) => setAuthorFilter(e.target.value)}
+                className="bg-slate-50 border border-slate-200 text-xs text-slate-700 font-medium rounded-lg px-2.5 py-1 focus:outline-none focus:border-emerald-500"
+              >
+                <option value="ALL">All Bookkeepers</option>
+                <option value="MINE">My Entries ({currentUser.fullName})</option>
+                <optgroup label="Filter By Individual Bookkeeper">
+                  {uniqueAuthors.map((author) => (
+                    <option key={author} value={author}>
+                      {author} {author.toLowerCase() === currentUser.fullName.toLowerCase() ? '(You)' : ''}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+
+            {/* Source Filter */}
+            <div className="flex items-center space-x-1.5 text-slate-500">
+              <Filter className="w-3.5 h-3.5 text-slate-400" />
+              <span>Source:</span>
+              <select
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value)}
+                className="bg-slate-50 border border-slate-200 text-xs text-slate-700 font-medium rounded-lg px-2.5 py-1 focus:outline-none focus:border-emerald-500"
+              >
+                <option value="ALL">All Sources</option>
+                <option value="manual">Manual Entry</option>
+                <option value="ocr_receipt">OCR Receipt</option>
+                <option value="bank_feed">Bank Feed Match</option>
+                <option value="qbo_import">QuickBooks Import</option>
+                <option value="wave_import">Wave Import</option>
+                <option value="csv_import">CSV Batch Import</option>
+              </select>
+            </div>
+
+            {/* Reversals Only Toggle */}
+            <label className="flex items-center space-x-1.5 cursor-pointer text-slate-600 select-none">
+              <input
+                type="checkbox"
+                checked={showReversalsOnly}
+                onChange={(e) => setShowReversalsOnly(e.target.checked)}
+                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5"
+              />
+              <span>Reversals Only</span>
+            </label>
           </div>
-          <select
-            value={sourceFilter}
-            onChange={(e) => setSourceFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 text-xs text-slate-700 font-medium rounded-lg px-3 py-1.5 focus:outline-none focus:border-emerald-500"
-          >
-            <option value="ALL">All Sources</option>
-            <option value="manual">Manual Entry</option>
-            <option value="ocr_receipt">OCR Receipt Extraction</option>
-            <option value="receipt_ocr">OCR Receipt (Alt)</option>
-            <option value="bank_feed">Bank Feed Match</option>
-            <option value="qbo_import">QuickBooks Import</option>
-            <option value="wave_import">Wave Import</option>
-            <option value="csv_import">CSV Batch Import</option>
-          </select>
+
+          {/* Expand / Collapse Actions */}
+          <div className="flex items-center space-x-2 text-slate-500">
+            <button
+              onClick={expandAll}
+              className="text-[11px] hover:text-slate-900 font-medium px-2 py-0.5 rounded hover:bg-slate-100"
+            >
+              Expand All
+            </button>
+            <span>•</span>
+            <button
+              onClick={collapseAll}
+              className="text-[11px] hover:text-slate-900 font-medium px-2 py-0.5 rounded hover:bg-slate-100"
+            >
+              Collapse All
+            </button>
+          </div>
         </div>
       </div>
 
@@ -284,7 +384,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
           });
 
           const isExpanded = expandedEntries[entry.id] !== false; // Default expanded
-          const isCreatedByCurrentUser = entry.createdBy.toLowerCase() === currentUser.fullName.toLowerCase();
+          const isCreatedByCurrentUser = isAuthoredByCurrentUser(entry);
 
           return (
             <div
@@ -292,6 +392,8 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
               className={`bg-white rounded-xl border transition-all ${
                 entry.isReversal
                   ? 'border-amber-200 bg-amber-50/20'
+                  : isCreatedByCurrentUser
+                  ? 'border-emerald-200/90 shadow-sm hover:border-emerald-300'
                   : 'border-slate-200 shadow-sm hover:border-slate-300'
               }`}
             >
@@ -300,12 +402,12 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                 onClick={() => toggleExpand(entry.id)}
                 className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 cursor-pointer select-none border-b border-slate-100"
               >
-                <div className="flex items-center space-x-3">
-                  <span className="font-mono font-bold text-xs px-2.5 py-1 rounded bg-slate-900 text-white">
+                <div className="flex items-start sm:items-center space-x-3">
+                  <span className="font-mono font-bold text-xs px-2.5 py-1 rounded bg-slate-900 text-white mt-0.5 sm:mt-0">
                     #{entry.entryNumber}
                   </span>
                   <div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="font-bold text-sm text-slate-900">{entry.memo}</span>
                       {getSourceBadge(entry.source)}
                       {entry.isReversal && (
@@ -314,18 +416,33 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                         </span>
                       )}
                       {isCreatedByCurrentUser && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
-                          Posted by You
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center space-x-1">
+                          <UserCheck className="w-3 h-3" />
+                          <span>Posted by You</span>
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-slate-400 flex items-center space-x-3 mt-0.5">
+
+                    {/* Bookkeeper Attribution & Timestamp */}
+                    <div className="text-xs text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
                       <span className="flex items-center space-x-1">
-                        <Calendar className="w-3 h-3" />
+                        <Calendar className="w-3 h-3 text-slate-400" />
                         <span>Date: {entry.entryDate}</span>
                       </span>
                       <span>•</span>
-                      <span>Created by: {entry.createdBy}</span>
+                      <span className="flex items-center space-x-1 text-slate-600">
+                        <UserIcon className="w-3 h-3 text-slate-400" />
+                        <span>Created by:</span>
+                        <strong className="text-slate-800 font-semibold">{entry.createdBy}</strong>
+                      </span>
+                      {entry.postedAt && (
+                        <>
+                          <span>•</span>
+                          <span className="text-[11px] text-slate-400">
+                            {new Date(entry.postedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -340,9 +457,10 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onReverseEntry(entry);
+                        setReversalCandidate(entry);
+                        setReversalReason(`Reversal of Entry #${entry.entryNumber}: ${entry.memo}`);
                       }}
-                      title="Post Immutable Reversing Entry"
+                      title="Post Immutable Reversing Entry under your staff credentials"
                       className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors border border-transparent hover:border-amber-200"
                     >
                       <RotateCcw className="w-4 h-4" />
@@ -418,11 +536,83 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
         {filteredEntries.length === 0 && (
           <div className="p-12 text-center text-slate-400 bg-white rounded-xl border border-slate-200">
             <BookOpen className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-            <div className="font-semibold text-slate-700 text-sm">No journal entries found</div>
-            <p className="text-xs text-slate-500 mt-1">Post a new journal entry or adjust search filters.</p>
+            <div className="font-semibold text-slate-700 text-sm">No journal entries match criteria</div>
+            <p className="text-xs text-slate-500 mt-1">
+              {authorFilter === 'MINE'
+                ? `You have not created any entries for ${client.legalName} yet. Click "Post Balanced Entry" to record one.`
+                : 'Try adjusting your search terms or filters.'}
+            </p>
           </div>
         )}
       </div>
+
+      {/* Staff Reversal Confirmation Modal */}
+      {reversalCandidate && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700">
+                <RotateCcw className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Post Immutable Reversing Entry
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Entry #{reversalCandidate.entryNumber}: {reversalCandidate.memo}
+                </p>
+              </div>
+            </div>
+
+            {/* Audit Log Attribution Banner */}
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1.5">
+              <div className="flex items-center space-x-1.5 text-slate-700 font-semibold">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>Audit Attribution Record</span>
+              </div>
+              <p className="text-slate-500">
+                This reversal will be permanently appended to the immutable General Ledger under your credentials:
+              </p>
+              <div className="font-medium text-slate-800 flex items-center space-x-2 pt-0.5">
+                <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">
+                  {currentUser.fullName}
+                </span>
+                <span className="text-slate-400">({currentUser.role.replace('_', ' ')})</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Reversal Memo / Reason
+              </label>
+              <input
+                type="text"
+                value={reversalReason}
+                onChange={(e) => setReversalReason(e.target.value)}
+                placeholder="Reason for reversing this journal entry..."
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setReversalCandidate(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmReversal}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-amber-600/20"
+              >
+                Confirm & Post Reversal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

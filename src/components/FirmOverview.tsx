@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Building2,
   CheckCircle2,
@@ -13,13 +13,17 @@ import {
   Sparkles,
   TrendingUp,
   MapPin,
+  User as UserIcon,
+  Users,
 } from 'lucide-react';
-import { Firm, ClientBusiness, CanadianProvince, BookkeepingStatus } from '../types';
+import { Firm, ClientBusiness, CanadianProvince, BookkeepingStatus, User, ActiveTab } from '../types';
+import { useFirmOverview } from '../hooks/useFirmOverview';
 
 interface FirmOverviewProps {
   firm: Firm;
   clients: ClientBusiness[];
-  onSelectClient: (client: ClientBusiness, targetTab?: 'general-ledger' | 'bank-reconciliation' | 'receipts-ocr' | 'tax-filing') => void;
+  currentUser?: User;
+  onSelectClient: (client: ClientBusiness, targetTab?: ActiveTab) => void;
   onOpenNewClient: () => void;
   bankTxCounts?: Record<string, number>;
   receiptCounts?: Record<string, number>;
@@ -28,30 +32,31 @@ interface FirmOverviewProps {
 export const FirmOverview: React.FC<FirmOverviewProps> = ({
   firm,
   clients,
+  currentUser,
   onSelectClient,
   onOpenNewClient,
   bankTxCounts = {},
   receiptCounts = {},
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [provinceFilter, setProvinceFilter] = useState<string>('ALL');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
-
-  const filteredClients = clients.filter((client) => {
-    const matchesSearch =
-      client.legalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.businessNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (client.operatingName && client.operatingName.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    const matchesProvince = provinceFilter === 'ALL' || client.provinceCode === provinceFilter;
-    const matchesStatus = statusFilter === 'ALL' || client.status === statusFilter;
-
-    return matchesSearch && matchesProvince && matchesStatus;
+  const {
+    searchTerm,
+    setSearchTerm,
+    statusFilter,
+    setStatusFilter,
+    bookkeeperFilter,
+    setBookkeeperFilter,
+    uniqueBookkeepers,
+    filteredClients,
+    metrics,
+  } = useFirmOverview({
+    firm,
+    clients,
+    currentUser,
+    bankTxCounts,
+    receiptCounts,
+    onSelectClient,
+    onOpenNewClient,
   });
-
-  const totalUnreconciled = Object.values(bankTxCounts).reduce((a: number, b: number) => a + (Number(b) || 0), 0);
-  const totalPendingReceipts = Object.values(receiptCounts).reduce((a: number, b: number) => a + (Number(b) || 0), 0);
-  const booksClosedCount = clients.filter((c) => c.status === 'Books Closed' || c.status === 'Up to Date').length;
 
   const getStatusBadge = (status: BookkeepingStatus) => {
     switch (status) {
@@ -99,7 +104,7 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
       <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-6 sm:p-8 text-white border border-slate-700/60 shadow-xl">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
-            <div className="flex items-center space-x-3 mb-2">
+            <div className="flex flex-wrap items-center gap-3 mb-2">
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
                 {firm.name}
               </h1>
@@ -108,8 +113,17 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
               </span>
             </div>
             <p className="text-sm text-slate-300 max-w-2xl">
-              Centralized firm-first workspace managing 15-client business files under strict PostgreSQL Row-Level Security, immutable double-entry journalizing, and integrated Canadian CRA / Revenu Québec tax filing.
+              Centralized practice workspace managing multi-client business files under strict PostgreSQL Row-Level Security, immutable double-entry journalizing, and integrated Canadian CRA / Revenu Québec tax filing.
             </p>
+
+            {currentUser && (
+              <div className="mt-3 flex items-center space-x-2 text-xs text-slate-400">
+                <UserIcon className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Active Bookkeeper: <strong className="text-white">{currentUser.fullName}</strong> ({currentUser.role.replace('_', ' ')})</span>
+                <span>•</span>
+                <span>Assigned Clients: <strong className="text-emerald-400">{metrics.myClientsCount}</strong></span>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center space-x-3">
@@ -145,10 +159,10 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
               <CheckCircle2 className="w-4 h-4 text-blue-400" />
             </div>
             <div className="text-2xl font-bold text-white">
-              {Math.round((booksClosedCount / clients.length) * 100)}%
+              {metrics.totalClients > 0 ? Math.round((metrics.upToDateCount / metrics.totalClients) * 100) : 100}%
             </div>
             <div className="text-[11px] text-slate-400 mt-1">
-              {booksClosedCount} of {clients.length} businesses
+              {metrics.upToDateCount} of {clients.length} businesses
             </div>
           </div>
 
@@ -158,10 +172,10 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
               <ArrowRightLeft className="w-4 h-4 text-orange-400" />
             </div>
             <div className="text-2xl font-bold text-white">
-              {totalUnreconciled}
+              {metrics.totalUnreconciledBankTx}
             </div>
             <div className="text-[11px] text-orange-400 mt-1 font-medium">
-              Action required across 4 files
+              Live items awaiting match
             </div>
           </div>
 
@@ -171,7 +185,7 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
               <Receipt className="w-4 h-4 text-purple-400" />
             </div>
             <div className="text-2xl font-bold text-white">
-              {totalPendingReceipts}
+              {metrics.totalPendingReceipts}
             </div>
             <div className="text-[11px] text-purple-400 mt-1 font-medium">
               OCR parsed & awaiting review
@@ -191,9 +205,9 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
             </p>
           </div>
 
-          {/* Filters */}
+          {/* Filters & Bookkeeper Switcher */}
           <div className="flex flex-wrap items-center gap-3">
-            <div className="relative min-w-[220px]">
+            <div className="relative min-w-[200px]">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
@@ -204,21 +218,52 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
               />
             </div>
 
+            {/* Quick Assigned Bookkeeper Filter */}
+            <div className="flex items-center space-x-1 bg-slate-100 p-0.5 rounded-lg text-xs">
+              <button
+                onClick={() => setBookkeeperFilter('ALL')}
+                className={`px-2.5 py-1 rounded-md font-medium transition-all ${
+                  bookkeeperFilter === 'ALL'
+                    ? 'bg-white font-bold text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                All Staff
+              </button>
+              {currentUser && (
+                <button
+                  onClick={() => setBookkeeperFilter('MINE')}
+                  className={`px-2.5 py-1 rounded-md font-medium transition-all ${
+                    bookkeeperFilter === 'MINE'
+                      ? 'bg-white font-bold text-emerald-800 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  My Clients ({metrics.myClientsCount})
+                </button>
+              )}
+            </div>
+
+            {/* Bookkeeper Select */}
             <select
-              value={provinceFilter}
-              onChange={(e) => setProvinceFilter(e.target.value)}
-              className="bg-slate-50 border border-slate-200 text-xs text-slate-700 font-medium rounded-lg px-3 py-1.5 focus:outline-none focus:border-emerald-500"
+              value={bookkeeperFilter}
+              onChange={(e) => setBookkeeperFilter(e.target.value)}
+              className="bg-slate-50 border border-slate-200 text-xs text-slate-700 font-medium rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500"
             >
-              <option value="ALL">All Provinces</option>
-              <option value="QC">Québec (QC - GST+QST)</option>
-              <option value="ON">Ontario (ON - HST)</option>
-              <option value="BC">British Columbia (BC)</option>
+              <option value="ALL">All Bookkeepers</option>
+              {currentUser && <option value="MINE">Assigned to Me ({currentUser.fullName})</option>}
+              {uniqueBookkeepers.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
             </select>
 
+            {/* Status Select */}
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-slate-50 border border-slate-200 text-xs text-slate-700 font-medium rounded-lg px-3 py-1.5 focus:outline-none focus:border-emerald-500"
+              className="bg-slate-50 border border-slate-200 text-xs text-slate-700 font-medium rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500"
             >
               <option value="ALL">All Statuses</option>
               <option value="Needs Review">Needs Review</option>
@@ -235,22 +280,35 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
           {filteredClients.map((client) => {
             const unreconciled = bankTxCounts[client.id] || 0;
             const receipts = receiptCounts[client.id] || 0;
+            const isAssignedToMe =
+              Boolean(currentUser?.fullName) &&
+              client.assignedBookkeeper.toLowerCase() === currentUser?.fullName.toLowerCase();
 
             return (
               <div
                 key={client.id}
-                className="p-5 hover:bg-slate-50/80 transition-colors flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4"
+                className={`p-5 transition-colors flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 ${
+                  isAssignedToMe ? 'bg-emerald-50/20 hover:bg-emerald-50/40' : 'hover:bg-slate-50/80'
+                }`}
               >
                 {/* Left info */}
                 <div className="space-y-1.5 max-w-xl">
-                  <div className="flex items-center space-x-3">
-                    <span className="font-bold text-slate-900 text-base hover:text-emerald-600 cursor-pointer" onClick={() => onSelectClient(client)}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className="font-bold text-slate-900 text-base hover:text-emerald-600 cursor-pointer"
+                      onClick={() => onSelectClient(client)}
+                    >
                       {client.legalName}
                     </span>
                     <span className="text-xs font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
                       {client.provinceCode}
                     </span>
                     {getStatusBadge(client.status)}
+                    {isAssignedToMe && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        Your File
+                      </span>
+                    )}
                   </div>
 
                   {client.operatingName && (
@@ -277,6 +335,10 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
                     <span className="flex items-center space-x-1 text-slate-400">
                       <Calendar className="w-3.5 h-3.5" />
                       <span>Year-End: Month {client.fiscalYearEndMonth}</span>
+                    </span>
+                    <span className="flex items-center space-x-1 text-slate-600">
+                      <UserIcon className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Bookkeeper: <strong>{client.assignedBookkeeper}</strong></span>
                     </span>
                   </div>
 
@@ -333,7 +395,7 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
             <div className="p-12 text-center text-slate-400">
               <Building2 className="w-10 h-10 mx-auto text-slate-300 mb-2" />
               <div className="font-semibold text-slate-700 text-sm">No client businesses match your filter</div>
-              <p className="text-xs text-slate-500 mt-1">Try changing the province or search keyword.</p>
+              <p className="text-xs text-slate-500 mt-1">Try changing the filter or search keyword.</p>
             </div>
           )}
         </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   FileSpreadsheet,
   Plus,
@@ -9,15 +9,20 @@ import {
   Check,
   AlertCircle,
   Tag,
+  Download,
+  AlertTriangle,
+  CheckCircle2,
+  User as UserIcon,
 } from 'lucide-react';
-import { ClientBusiness, ChartOfAccount, AccountType, AccountClassification, JournalEntry } from '../types';
-import { calculateAccountBalances } from '../utils/ledgerEngine';
+import { ClientBusiness, ChartOfAccount, AccountType, AccountClassification, JournalEntry, User } from '../types';
 import { formatCurrency } from '../utils/taxCalculator';
+import { useChartOfAccounts } from '../hooks/useChartOfAccounts';
 
 interface ChartOfAccountsViewProps {
   client: ClientBusiness;
   accounts: ChartOfAccount[];
   entries: JournalEntry[];
+  currentUser?: User;
   onAddAccount: (newAcc: Omit<ChartOfAccount, 'id'>) => void;
 }
 
@@ -25,71 +30,65 @@ export const ChartOfAccountsView: React.FC<ChartOfAccountsViewProps> = ({
   client,
   accounts,
   entries,
+  currentUser,
   onAddAccount,
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState<string>('ALL');
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
-  // New account form state
-  const [newCode, setNewCode] = useState('');
-  const [newName, setNewName] = useState('');
-  const [newType, setNewType] = useState<AccountType>('expense');
-  const [newClassification, setNewClassification] = useState<AccountClassification>('operating_expense');
-
-  const balanceMap = calculateAccountBalances(accounts, entries);
-
-  const filteredAccounts = accounts
-    .slice()
-    .sort((a, b) => a.accountCode.localeCompare(b.accountCode))
-    .filter((acc) => {
-      const matchesSearch =
-        acc.accountCode.includes(searchTerm) ||
-        acc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        acc.classification.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesType = selectedType === 'ALL' || acc.type === selectedType;
-
-      return matchesSearch && matchesType;
-    });
-
-  const handleCreateAccount = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCode || !newName) return;
-
-    onAddAccount({
-      clientBusinessId: client.id,
-      accountCode: newCode,
-      name: newName,
-      type: newType,
-      classification: newClassification,
-      currency: 'CAD',
-      isActive: true,
-      isSystem: false,
-    });
-
-    setNewCode('');
-    setNewName('');
-    setIsAddModalOpen(false);
-  };
+  const {
+    searchTerm,
+    setSearchTerm,
+    selectedType,
+    setSelectedType,
+    isAddModalOpen,
+    setIsAddModalOpen,
+    newCode,
+    setNewCode,
+    newName,
+    setNewName,
+    newType,
+    newClassification,
+    setNewClassification,
+    handleTypeChange,
+    handleCreateAccount,
+    validateNewAccount,
+    formErrors,
+    balanceMap,
+    filteredAccounts,
+    typeCounts,
+    exportCOAToCSV,
+    successToast,
+  } = useChartOfAccounts({
+    client,
+    accounts,
+    entries,
+    currentUser,
+    onAddAccount,
+  });
 
   const getTypeBadge = (type: AccountType) => {
     switch (type) {
       case 'asset':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">Asset</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">Asset (1xxx)</span>;
       case 'liability':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">Liability</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">Liability (2xxx)</span>;
       case 'equity':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">Equity</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">Equity (3xxx)</span>;
       case 'revenue':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Revenue</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Revenue (4xxx)</span>;
       case 'expense':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">Expense</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">Expense (5xxx-9xxx)</span>;
     }
   };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      {/* Toast Notification */}
+      {successToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl border border-emerald-500/40 flex items-center space-x-3 text-xs font-semibold animate-in fade-in slide-in-from-bottom-3">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{successToast}</span>
+        </div>
+      )}
+
       {/* Header Context */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -102,17 +101,27 @@ export const ChartOfAccountsView: React.FC<ChartOfAccountsViewProps> = ({
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Standard GAAP account hierarchy with real-time balance calculations derived directly from the immutable double-entry journal.
+            Standard Canadian GAAP account hierarchy with real-time balance calculations derived directly from the immutable double-entry journal.
           </p>
         </div>
 
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all shadow-sm"
-        >
-          <Plus className="w-4 h-4 text-emerald-400 stroke-[3]" />
-          <span>Add Account Code</span>
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={exportCOAToCSV}
+            className="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3.5 py-2.5 rounded-xl text-xs transition-colors border border-slate-200"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export CSV</span>
+          </button>
+
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all shadow-sm"
+          >
+            <Plus className="w-4 h-4 text-emerald-400 stroke-[3]" />
+            <span>Add Account Code</span>
+          </button>
+        </div>
       </div>
 
       {/* Class Switcher & Search Bar */}
@@ -130,17 +139,17 @@ export const ChartOfAccountsView: React.FC<ChartOfAccountsViewProps> = ({
 
         {/* Type Filter Buttons */}
         <div className="flex items-center space-x-1 overflow-x-auto w-full sm:w-auto scrollbar-none">
-          {['ALL', 'asset', 'liability', 'equity', 'revenue', 'expense'].map((t) => (
+          {(['ALL', 'asset', 'liability', 'equity', 'revenue', 'expense'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setSelectedType(t)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-colors whitespace-nowrap ${
                 selectedType === t
-                  ? 'bg-slate-900 text-white'
+                  ? 'bg-slate-900 text-white shadow-xs'
                   : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
               }`}
             >
-              {t === 'ALL' ? 'All Classes' : t}
+              {t === 'ALL' ? 'All Accounts' : t} ({typeCounts[t]})
             </button>
           ))}
         </div>
@@ -154,49 +163,36 @@ export const ChartOfAccountsView: React.FC<ChartOfAccountsViewProps> = ({
               <tr className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
                 <th className="py-3 px-4">Account Code</th>
                 <th className="py-3 px-4">Account Name</th>
-                <th className="py-3 px-4">Class</th>
+                <th className="py-3 px-4">Type</th>
                 <th className="py-3 px-4">Classification</th>
-                <th className="py-3 px-4">Normal Balance</th>
-                <th className="py-3 px-4 text-right">Debit Sum</th>
-                <th className="py-3 px-4 text-right">Credit Sum</th>
                 <th className="py-3 px-4 text-right">Net Balance (CAD)</th>
+                <th className="py-3 px-4 text-center">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredAccounts.map((acc) => {
-                const bal = balanceMap.get(acc.id);
-                const normalBal = acc.type === 'asset' || acc.type === 'expense' ? 'Debit' : 'Credit';
-
+                const bal = balanceMap[acc.id] || 0;
                 return (
-                  <tr key={acc.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-3 px-4 font-mono font-bold text-slate-900">
-                      {acc.accountCode}
-                    </td>
-                    <td className="py-3 px-4 font-medium text-slate-900">
-                      <div className="flex items-center space-x-2">
-                        <span>{acc.name}</span>
-                        {acc.isSystem && (
-                          <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
-                            System
-                          </span>
-                        )}
-                      </div>
+                  <tr key={acc.id} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3 px-4 font-mono font-bold text-slate-900">{acc.accountCode}</td>
+                    <td className="py-3 px-4 font-medium text-slate-900 flex items-center space-x-2">
+                      <span>{acc.name}</span>
+                      {acc.isSystem && (
+                        <span className="text-[10px] font-semibold bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded">
+                          System
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-4">{getTypeBadge(acc.type)}</td>
-                    <td className="py-3 px-4 text-slate-600 font-mono text-[11px] capitalize">
-                      {acc.classification.replace(/_/g, ' ')}
+                    <td className="py-3 px-4 text-slate-500 capitalize">{acc.classification.replace(/_/g, ' ')}</td>
+                    <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
+                      {formatCurrency(bal)}
                     </td>
-                    <td className="py-3 px-4 text-slate-500 font-semibold text-[11px]">
-                      {normalBal}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono text-slate-600">
-                      {bal && bal.debitTotal > 0 ? formatCurrency(bal.debitTotal) : '—'}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono text-slate-600">
-                      {bal && bal.creditTotal > 0 ? formatCurrency(bal.creditTotal) : '—'}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono font-bold text-slate-900 text-sm">
-                      {bal ? formatCurrency(bal.netBalance) : '$0.00'}
+                    <td className="py-3 px-4 text-center">
+                      <span className="inline-flex items-center space-x-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                        <Check className="w-2.5 h-2.5" />
+                        <span>Active</span>
+                      </span>
                     </td>
                   </tr>
                 );
@@ -206,86 +202,133 @@ export const ChartOfAccountsView: React.FC<ChartOfAccountsViewProps> = ({
         </div>
       </div>
 
-      {/* Add Account Modal */}
+      {/* Add Account Modal with GAAP Validation */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-900 mb-1">Add Chart of Account</h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Add a new standardized account code to {client.legalName}'s general ledger structure.
-            </p>
-
-            <form onSubmit={handleCreateAccount} className="space-y-4">
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Account Code</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g., 6600, 1030"
-                  value={newCode}
-                  onChange={(e) => setNewCode(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-emerald-500"
-                />
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center space-x-2">
+                <Plus className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-bold text-sm text-slate-900">Add New Chart of Accounts Code</h3>
               </div>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Account Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g., Advertising & Digital Marketing"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
-                />
+            {formErrors.length > 0 && (
+              <div className="bg-rose-50 border border-rose-200 p-3 rounded-xl space-y-1 text-xs text-rose-800">
+                <div className="font-bold flex items-center space-x-1">
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Validation Errors</span>
+                </div>
+                {formErrors.map((err, i) => (
+                  <div key={i} className="pl-4">• {err}</div>
+                ))}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateAccount} className="space-y-4 text-xs">
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700">Account Type</label>
+                <select
+                  value={newType}
+                  onChange={(e) => handleTypeChange(e.target.value as AccountType)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-medium text-slate-900 focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="asset">Asset (1000 - 1999)</option>
+                  <option value="liability">Liability (2000 - 2999)</option>
+                  <option value="equity">Equity (3000 - 3999)</option>
+                  <option value="revenue">Revenue (4000 - 4999)</option>
+                  <option value="expense">Expense (5000 - 9999)</option>
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Account Type</label>
-                  <select
-                    value={newType}
-                    onChange={(e) => setNewType(e.target.value as AccountType)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-xs focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="asset">Asset (1000s)</option>
-                    <option value="liability">Liability (2000s)</option>
-                    <option value="equity">Equity (3000s)</option>
-                    <option value="revenue">Revenue (4000s)</option>
-                    <option value="expense">Expense (5000-6000s)</option>
-                  </select>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Account Code (GAAP)</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 5420"
+                    value={newCode}
+                    onChange={(e) => setNewCode(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-slate-900 focus:outline-none focus:border-emerald-500"
+                  />
                 </div>
 
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Classification</label>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Classification</label>
                   <select
                     value={newClassification}
                     onChange={(e) => setNewClassification(e.target.value as AccountClassification)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-xs focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-medium text-slate-900 focus:outline-none focus:border-emerald-500"
                   >
-                    <option value="operating_expense">Operating Expense</option>
-                    <option value="cost_of_goods_sold">Cost of Goods Sold</option>
-                    <option value="operating_revenue">Operating Revenue</option>
-                    <option value="bank">Bank / Cash</option>
-                    <option value="accounts_receivable">Accounts Receivable</option>
-                    <option value="accounts_payable">Accounts Payable</option>
-                    <option value="sales_tax_payable">Sales Tax Payable</option>
-                    <option value="owner_equity">Owner Equity</option>
+                    {newType === 'asset' && (
+                      <>
+                        <option value="current_asset">Current Asset</option>
+                        <option value="bank">Bank / Cash</option>
+                        <option value="accounts_receivable">Accounts Receivable</option>
+                      </>
+                    )}
+                    {newType === 'liability' && (
+                      <>
+                        <option value="current_liability">Current Liability</option>
+                        <option value="credit_card">Credit Card</option>
+                        <option value="accounts_payable">Accounts Payable</option>
+                        <option value="sales_tax_payable">Sales Tax Payable</option>
+                      </>
+                    )}
+                    {newType === 'equity' && (
+                      <>
+                        <option value="owner_equity">Owner Equity</option>
+                        <option value="retained_earnings">Retained Earnings</option>
+                      </>
+                    )}
+                    {newType === 'revenue' && (
+                      <>
+                        <option value="operating_revenue">Operating Revenue</option>
+                        <option value="other_revenue">Other Revenue</option>
+                      </>
+                    )}
+                    {newType === 'expense' && (
+                      <>
+                        <option value="operating_expense">Operating Expense</option>
+                        <option value="cost_of_goods_sold">Cost of Goods Sold</option>
+                        <option value="payroll_expense">Payroll Expense</option>
+                        <option value="tax_expense">Tax Expense</option>
+                      </>
+                    )}
                   </select>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-100">
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700">Account Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Cloud Hosting & SaaS Subscriptions"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-900 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-sm"
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold shadow-sm"
                 >
                   Save Account
                 </button>

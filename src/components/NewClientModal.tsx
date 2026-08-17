@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Building,
   Check,
@@ -7,14 +7,17 @@ import {
   AlertCircle,
   Calendar,
   Sparkles,
+  User as UserIcon,
 } from 'lucide-react';
-import { ClientBusiness, ProvinceCode, Firm, BookkeepingStatus } from '../types';
+import { ClientBusiness, ProvinceCode, Firm, BookkeepingStatus, User } from '../types';
 
 interface NewClientModalProps {
   isOpen: boolean;
   onClose: () => void;
   firm: Firm;
   currentClientCount: number;
+  currentUser?: User;
+  allUsers?: User[];
   onAddClient: (newClient: Omit<ClientBusiness, 'id'>) => void;
 }
 
@@ -23,6 +26,8 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
   onClose,
   firm,
   currentClientCount,
+  currentUser,
+  allUsers = [],
   onAddClient,
 }) => {
   const [legalName, setLegalName] = useState('');
@@ -32,7 +37,13 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
   const [gstNumber, setGstNumber] = useState('');
   const [qstNumber, setQstNumber] = useState('');
   const [fiscalYearEndMonth, setFiscalYearEndMonth] = useState(12);
-  const [assignedBookkeeper, setAssignedBookkeeper] = useState('Jeff Tremblay');
+  const [assignedBookkeeper, setAssignedBookkeeper] = useState(currentUser?.fullName || 'Jeff Tremblay');
+
+  useEffect(() => {
+    if (currentUser?.fullName) {
+      setAssignedBookkeeper(currentUser.fullName);
+    }
+  }, [currentUser]);
 
   if (!isOpen) return null;
 
@@ -56,7 +67,7 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
       currency: 'CAD',
       status: 'Up to Date' as BookkeepingStatus,
       lastClosedMonth: '2026-06',
-      assignedBookkeeper: assignedBookkeeper || 'Jeff Tremblay',
+      assignedBookkeeper: assignedBookkeeper || currentUser?.fullName || 'Jeff Tremblay',
       isActive: true,
     });
 
@@ -64,7 +75,7 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -80,9 +91,11 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
         </div>
 
         {/* Firm Boundary Status */}
-        <div className={`p-3.5 rounded-xl border flex items-center justify-between text-xs ${
-          isLimitReached ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-slate-50 border-slate-200 text-slate-700'
-        }`}>
+        <div
+          className={`p-3.5 rounded-xl border flex items-center justify-between text-xs ${
+            isLimitReached ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-slate-50 border-slate-200 text-slate-700'
+          }`}
+        >
           <div className="flex items-center space-x-2">
             <Building className="w-4 h-4 text-emerald-600" />
             <span className="font-semibold">Firm Boundary Capacity:</span>
@@ -159,6 +172,24 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
+                <label className="font-bold text-slate-700 block mb-1">Assigned Lead Bookkeeper</label>
+                <select
+                  value={assignedBookkeeper}
+                  onChange={(e) => setAssignedBookkeeper(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500"
+                >
+                  {allUsers.map((u) => (
+                    <option key={u.id} value={u.fullName}>
+                      {u.fullName} ({u.role.replace('_', ' ')})
+                    </option>
+                  ))}
+                  {!allUsers.some((u) => u.fullName === assignedBookkeeper) && (
+                    <option value={assignedBookkeeper}>{assignedBookkeeper}</option>
+                  )}
+                </select>
+              </div>
+
+              <div>
                 <label className="font-bold text-slate-700 block mb-1">Fiscal Year-End Month</label>
                 <select
                   value={fiscalYearEndMonth}
@@ -171,16 +202,6 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
                   <option value={9}>September 30</option>
                   <option value={10}>October 31</option>
                 </select>
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Base Currency</label>
-                <input
-                  type="text"
-                  disabled
-                  value="CAD ($)"
-                  className="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-xs font-mono text-slate-600"
-                />
               </div>
             </div>
 

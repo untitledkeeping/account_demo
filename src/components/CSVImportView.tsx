@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   UploadCloud,
   FileSpreadsheet,
@@ -10,63 +10,50 @@ import {
   Building,
   Check,
   FileText,
+  ShieldCheck,
+  User as UserIcon,
+  AlertTriangle,
 } from 'lucide-react';
-import { ClientBusiness, ChartOfAccount, JournalEntry } from '../types';
-import {
-  parseCSVText,
-  convertCSVToLedgerEntries,
-  SAMPLE_QBO_CSV,
-  SAMPLE_WAVE_CSV,
-  SAMPLE_BANK_CSV,
-  ParsedCSVResult,
-} from '../utils/csvParser';
+import { ClientBusiness, ChartOfAccount, JournalEntry, User } from '../types';
 import { formatCurrency } from '../utils/taxCalculator';
+import { useCSVImport } from '../hooks/useCSVImport';
 
 interface CSVImportViewProps {
   client: ClientBusiness;
   accounts: ChartOfAccount[];
+  currentUser?: User;
   onBatchImportEntries: (entries: Partial<JournalEntry>[]) => void;
 }
 
 export const CSVImportView: React.FC<CSVImportViewProps> = ({
   client,
   accounts,
+  currentUser,
   onBatchImportEntries,
 }) => {
-  const [csvText, setCsvText] = useState<string>(SAMPLE_QBO_CSV);
-  const [fileName, setFileName] = useState<string>('qbo_general_ledger_export.csv');
-  const [parsedResult, setParsedResult] = useState<ParsedCSVResult | null>(() => {
-    const raw = parseCSVText(SAMPLE_QBO_CSV);
-    return convertCSVToLedgerEntries(raw, 'qbo_general_ledger_export.csv', client.id, accounts, client.provinceCode);
+  const {
+    csvText,
+    setCsvText,
+    fileName,
+    parsedResult,
+    isSuccess,
+    isDragging,
+    batchValidation,
+    handleParse,
+    handleFileUpload,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+    handleExecuteImport,
+    loadQBOTemplate,
+    loadWaveTemplate,
+    loadBankTemplate,
+  } = useCSVImport({
+    client,
+    accounts,
+    currentUser,
+    onBatchImportEntries,
   });
-  const [isSuccess, setIsSuccess] = useState(false);
-
-  const handleParse = (text: string, name: string = fileName) => {
-    setCsvText(text);
-    setFileName(name);
-    const raw = parseCSVText(text);
-    const result = convertCSVToLedgerEntries(raw, name, client.id, accounts, client.provinceCode);
-    setParsedResult(result);
-    setIsSuccess(false);
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      handleParse(content, file.name);
-    };
-    reader.readAsText(file);
-  };
-
-  const handleExecuteImport = () => {
-    if (!parsedResult || parsedResult.extractedEntries.length === 0) return;
-    onBatchImportEntries(parsedResult.extractedEntries);
-    setIsSuccess(true);
-  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -81,15 +68,30 @@ export const CSVImportView: React.FC<CSVImportViewProps> = ({
               {client.legalName}
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Zero-friction migration pipeline supporting QuickBooks Online, Wave, and generic Canadian bank statement exports with automatic Canadian tax deconstruction.
-          </p>
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-slate-600">
+            <div className="flex items-center space-x-1.5 bg-emerald-50 text-emerald-900 px-2.5 py-1 rounded-lg border border-emerald-200/80 font-medium">
+              <UserIcon className="w-3.5 h-3.5 text-emerald-600" />
+              <span>
+                Importing Bookkeeper: <strong className="text-slate-900">{currentUser?.fullName || 'Senior Accountant'}</strong>
+              </span>
+            </div>
+            <span className="text-slate-300">•</span>
+            <p className="text-xs text-slate-500">
+              Zero-friction migration pipeline supporting QuickBooks Online, Wave, and Canadian bank feeds with automatic Canadian tax deconstruction.
+            </p>
+          </div>
         </div>
 
         {parsedResult && parsedResult.extractedEntries.length > 0 && (
           <button
             onClick={handleExecuteImport}
-            className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all shadow-md shadow-emerald-600/20"
+            disabled={!batchValidation.isValid}
+            className={`flex items-center space-x-2 font-bold px-4 py-2.5 rounded-xl text-xs transition-all shadow-md ${
+              batchValidation.isValid
+                ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20'
+                : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+            }`}
           >
             {isSuccess ? (
               <>
@@ -113,7 +115,7 @@ export const CSVImportView: React.FC<CSVImportViewProps> = ({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => handleParse(SAMPLE_QBO_CSV, 'quickbooks_online_gl_2026.csv')}
+            onClick={loadQBOTemplate}
             className="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-700 transition-colors"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-blue-400" />
@@ -121,7 +123,7 @@ export const CSVImportView: React.FC<CSVImportViewProps> = ({
           </button>
 
           <button
-            onClick={() => handleParse(SAMPLE_WAVE_CSV, 'wave_accounting_export.csv')}
+            onClick={loadWaveTemplate}
             className="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-700 transition-colors"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-cyan-400" />
@@ -129,7 +131,7 @@ export const CSVImportView: React.FC<CSVImportViewProps> = ({
           </button>
 
           <button
-            onClick={() => handleParse(SAMPLE_BANK_CSV, 'desjardins_rbc_statement.csv')}
+            onClick={loadBankTemplate}
             className="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-700 transition-colors"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
@@ -138,91 +140,129 @@ export const CSVImportView: React.FC<CSVImportViewProps> = ({
         </div>
       </div>
 
-      {/* Upload & CSV Input Box */}
+      {/* Drag & Drop File Ingestion & Manual CSV Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-4 space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Upload CSV File</h3>
-            <label className="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors text-center bg-slate-50/50">
-              <UploadCloud className="w-8 h-8 text-slate-400 mb-2" />
-              <span className="text-xs font-bold text-slate-800">Choose CSV File</span>
-              <span className="text-[11px] text-slate-400 mt-0.5">Drag and drop or browse</span>
-              <input type="file" accept=".csv,text/csv" onChange={handleFileUpload} className="hidden" />
+        {/* Left: CSV Raw Text Editor and File Dropper */}
+        <div className="lg:col-span-5 space-y-3">
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer bg-white ${
+              isDragging ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-300 hover:border-slate-400'
+            }`}
+          >
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={handleFileUpload}
+              className="hidden"
+              id="csv-file-input"
+            />
+            <label htmlFor="csv-file-input" className="cursor-pointer block space-y-2">
+              <UploadCloud className="w-8 h-8 mx-auto text-slate-400" />
+              <div className="font-bold text-xs text-slate-800">
+                Drop CSV file here or click to browse
+              </div>
+              <div className="text-[11px] text-slate-500">
+                Supports QuickBooks Online, Wave, Xero, and Canadian bank CSVs
+              </div>
             </label>
+          </div>
 
-            <div>
-              <label className="text-[11px] font-bold text-slate-600 block mb-1">Or Paste Raw CSV Data</label>
-              <textarea
-                rows={7}
-                value={csvText}
-                onChange={(e) => handleParse(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-[11px] font-mono text-slate-800 focus:outline-none focus:border-emerald-500"
-              />
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+              <span>Raw CSV Payload ({fileName})</span>
+              <span className="text-[11px] text-slate-400 font-mono">{csvText.split('\n').length} lines</span>
             </div>
+            <textarea
+              rows={9}
+              value={csvText}
+              onChange={(e) => handleParse(e.target.value)}
+              className="w-full font-mono text-[11px] bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-800 focus:outline-none focus:border-emerald-500"
+              placeholder="Paste raw CSV content here..."
+            />
           </div>
         </div>
 
-        {/* Right: Parsed Preview & Double-Entry Mapping */}
-        <div className="lg:col-span-8 space-y-4">
-          {parsedResult ? (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <span className="font-bold text-sm text-slate-900">{parsedResult.fileName}</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      Detected: {parsedResult.sourceType.toUpperCase()}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Parsed {parsedResult.rowCount} rows • Generated {parsedResult.extractedEntries.length} compound journal entries
-                  </p>
-                </div>
-
-                <div className="text-right">
-                  <span className="text-xs text-slate-400 block font-medium">Auto-Balancing Status</span>
-                  <span className="text-xs font-bold text-emerald-700 font-mono">Debits === Credits [PASS]</span>
-                </div>
-              </div>
-
-              {/* Sample Parsed Rows */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs font-mono">
-                  <thead>
-                    <tr className="bg-slate-50 text-slate-600 font-sans font-bold border-b border-slate-200">
-                      {parsedResult.headers.map((h) => (
-                        <th key={h} className="py-2 px-3 whitespace-nowrap">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {parsedResult.rows.map((r, i) => (
-                      <tr key={i} className="hover:bg-slate-50/60">
-                        {parsedResult.headers.map((h) => (
-                          <td key={h} className="py-2 px-3 text-slate-800 whitespace-nowrap">
-                            {r[h]}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="bg-emerald-50/70 border border-emerald-200 p-3 rounded-xl flex items-center space-x-2 text-xs text-emerald-800">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+        {/* Right: Validation Inspector & Pre-flight Preview */}
+        <div className="lg:col-span-7 space-y-4">
+          {batchValidation.isBalanced ? (
+            <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-3.5 flex items-center justify-between text-xs text-emerald-900">
+              <div className="flex items-center space-x-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>
-                  Ready to batch-post into {client.legalName}'s immutable General Ledger with automatic GST/QST expense deconstruction.
+                  <strong>Batch Double-Entry Integrity Validated:</strong> Debits (${batchValidation.totalDebits.toFixed(2)}) === Credits (${batchValidation.totalCredits.toFixed(2)})
                 </span>
               </div>
+              <span className="font-mono font-bold text-emerald-700 text-[11px] bg-white px-2 py-0.5 rounded border border-emerald-200">
+                Balanced
+              </span>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-400">
-              <FileSpreadsheet className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-              <div className="font-semibold text-slate-700 text-sm">No CSV loaded</div>
-              <p className="text-xs text-slate-500 mt-1">Select a sample template or upload a file.</p>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 space-y-1 text-xs text-amber-900">
+              <div className="flex items-center space-x-2 font-bold">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Batch Imbalance Detected</span>
+              </div>
+              <div className="pl-6">
+                Total Debits (${batchValidation.totalDebits.toFixed(2)}) do not match Total Credits (${batchValidation.totalCredits.toFixed(2)}).
+              </div>
             </div>
           )}
+
+          {/* Parsed Entries Table Preview */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-xs text-slate-900 uppercase tracking-wider">
+                  Extracted Journal Entries Preview ({parsedResult?.extractedEntries.length || 0})
+                </h3>
+                <div className="text-[11px] text-slate-500">
+                  Target Entity: {client.legalName} ({client.provinceCode})
+                </div>
+              </div>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                {parsedResult?.detectedFormat || 'Auto-Mapped'}
+              </span>
+            </div>
+
+            <div className="max-h-[440px] overflow-y-auto divide-y divide-slate-100">
+              {parsedResult?.extractedEntries.map((entry, idx) => (
+                <div key={idx} className="p-4 hover:bg-slate-50/50 transition-colors text-xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-mono font-bold text-slate-800">#{idx + 1}</span>
+                      <span className="text-slate-500 font-mono">{entry.entryDate}</span>
+                      <span className="font-semibold text-slate-900">{entry.memo}</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-mono uppercase bg-slate-100 px-1.5 py-0.5 rounded">
+                      {entry.source}
+                    </span>
+                  </div>
+
+                  <div className="pl-4 border-l-2 border-slate-200 space-y-1 font-mono text-[11px]">
+                    {entry.lines?.map((line, lIdx) => (
+                      <div key={lIdx} className="flex justify-between text-slate-600">
+                        <span>{line.description}</span>
+                        <div className="space-x-3">
+                          {line.debit > 0 && <span className="text-slate-900">DR: {formatCurrency(line.debit)}</span>}
+                          {line.credit > 0 && <span className="text-slate-700">CR: {formatCurrency(line.credit)}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              {(!parsedResult || parsedResult.extractedEntries.length === 0) && (
+                <div className="p-12 text-center text-slate-400">
+                  <FileSpreadsheet className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+                  <p className="font-medium text-xs">No valid journal entries extracted from CSV.</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
