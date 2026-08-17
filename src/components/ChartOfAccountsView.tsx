@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   User as UserIcon,
+  X,
 } from 'lucide-react';
 import { ClientBusiness, ChartOfAccount, AccountType, AccountClassification, JournalEntry, User } from '../types';
 import { formatCurrency } from '../utils/taxCalculator';
@@ -75,12 +76,12 @@ export const ChartOfAccountsView: React.FC<ChartOfAccountsViewProps> = ({
       case 'revenue':
         return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Revenue (4xxx)</span>;
       case 'expense':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">Expense (5xxx-9xxx)</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">Expense (5xxx+)</span>;
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6">
       {/* Toast Notification */}
       {successToast && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl border border-emerald-500/40 flex items-center space-x-3 text-xs font-semibold animate-in fade-in slide-in-from-bottom-3">
@@ -90,10 +91,10 @@ export const ChartOfAccountsView: React.FC<ChartOfAccountsViewProps> = ({
       )}
 
       {/* Header Context */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="bg-white rounded-xl sm:rounded-2xl p-5 sm:p-6 border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <div className="flex items-center space-x-3">
-            <h1 className="text-xl font-bold text-slate-900">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900">
               Chart of Accounts (COA)
             </h1>
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-800 border border-slate-200">
@@ -101,14 +102,14 @@ export const ChartOfAccountsView: React.FC<ChartOfAccountsViewProps> = ({
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Standard Canadian GAAP account hierarchy with real-time balance calculations derived directly from the immutable double-entry journal.
+            Standard Canadian GAAP hierarchy with live balance calculation derived from journal entries.
           </p>
         </div>
 
         <div className="flex items-center space-x-2">
           <button
             onClick={exportCOAToCSV}
-            className="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3.5 py-2.5 rounded-xl text-xs transition-colors border border-slate-200"
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3.5 py-2 rounded-xl text-xs transition-colors border border-slate-200 min-h-[40px]"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export CSV</span>
@@ -116,57 +117,57 @@ export const ChartOfAccountsView: React.FC<ChartOfAccountsViewProps> = ({
 
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all shadow-sm"
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-xs min-h-[40px]"
           >
-            <Plus className="w-4 h-4 text-emerald-400 stroke-[3]" />
-            <span>Add Account Code</span>
+            <Plus className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />
+            <span>Add Account</span>
           </button>
         </div>
       </div>
 
       {/* Class Switcher & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs">
+        <div className="relative w-full md:w-80">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search code (e.g., 2150), name..."
+            placeholder="Search code (e.g. 2150), name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-colors"
+            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-colors"
           />
         </div>
 
-        {/* Type Filter Buttons */}
-        <div className="flex items-center space-x-1 overflow-x-auto w-full sm:w-auto scrollbar-none">
+        {/* Type Filter Tabs */}
+        <div className="flex items-center space-x-1 overflow-x-auto w-full md:w-auto scrollbar-none pb-1 md:pb-0">
           {(['ALL', 'asset', 'liability', 'equity', 'revenue', 'expense'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setSelectedType(t)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-colors whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-colors whitespace-nowrap min-h-[36px] ${
                 selectedType === t
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
               }`}
             >
-              {t === 'ALL' ? 'All Accounts' : t} ({typeCounts[t]})
+              {t === 'ALL' ? 'All' : t} ({typeCounts[t]})
             </button>
           ))}
         </div>
       </div>
 
       {/* Accounts Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs min-w-[600px]">
             <thead>
               <tr className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                <th className="py-3 px-4">Account Code</th>
-                <th className="py-3 px-4">Account Name</th>
-                <th className="py-3 px-4">Type</th>
-                <th className="py-3 px-4">Classification</th>
-                <th className="py-3 px-4 text-right">Net Balance (CAD)</th>
-                <th className="py-3 px-4 text-center">Status</th>
+                <th className="py-2.5 px-4">Code</th>
+                <th className="py-2.5 px-4">Account Name</th>
+                <th className="py-2.5 px-4">Type</th>
+                <th className="py-2.5 px-4">Classification</th>
+                <th className="py-2.5 px-4 text-right">Net Balance (CAD)</th>
+                <th className="py-2.5 px-4 text-center">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -174,21 +175,21 @@ export const ChartOfAccountsView: React.FC<ChartOfAccountsViewProps> = ({
                 const bal = balanceMap[acc.id] || 0;
                 return (
                   <tr key={acc.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3 px-4 font-mono font-bold text-slate-900">{acc.accountCode}</td>
-                    <td className="py-3 px-4 font-medium text-slate-900 flex items-center space-x-2">
+                    <td className="py-2.5 px-4 font-mono font-bold text-slate-900">{acc.accountCode}</td>
+                    <td className="py-2.5 px-4 font-medium text-slate-900 flex items-center space-x-1.5">
                       <span>{acc.name}</span>
                       {acc.isSystem && (
-                        <span className="text-[10px] font-semibold bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded">
+                        <span className="text-[9px] font-semibold bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded">
                           System
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-4">{getTypeBadge(acc.type)}</td>
-                    <td className="py-3 px-4 text-slate-500 capitalize">{acc.classification.replace(/_/g, ' ')}</td>
-                    <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
+                    <td className="py-2.5 px-4">{getTypeBadge(acc.type)}</td>
+                    <td className="py-2.5 px-4 text-slate-500 capitalize">{acc.classification.replace(/_/g, ' ')}</td>
+                    <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900">
                       {formatCurrency(bal)}
                     </td>
-                    <td className="py-3 px-4 text-center">
+                    <td className="py-2.5 px-4 text-center">
                       <span className="inline-flex items-center space-x-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full text-[10px] font-bold">
                         <Check className="w-2.5 h-2.5" />
                         <span>Active</span>
@@ -202,25 +203,25 @@ export const ChartOfAccountsView: React.FC<ChartOfAccountsViewProps> = ({
         </div>
       </div>
 
-      {/* Add Account Modal with GAAP Validation */}
+      {/* Add Account Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="bg-white rounded-xl sm:rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center space-x-2">
                 <Plus className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-bold text-sm text-slate-900">Add New Chart of Accounts Code</h3>
+                <h3 className="font-bold text-sm text-slate-900">Add Account Code</h3>
               </div>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+                className="text-slate-400 hover:text-slate-600 min-h-[36px] min-w-[36px] flex items-center justify-center"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {formErrors.length > 0 && (
-              <div className="bg-rose-50 border border-rose-200 p-3 rounded-xl space-y-1 text-xs text-rose-800">
+              <div className="bg-rose-50 border border-rose-200 p-2.5 rounded-xl space-y-0.5 text-xs text-rose-800">
                 <div className="font-bold flex items-center space-x-1">
                   <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
                   <span>Validation Errors</span>
@@ -231,7 +232,7 @@ export const ChartOfAccountsView: React.FC<ChartOfAccountsViewProps> = ({
               </div>
             )}
 
-            <form onSubmit={handleCreateAccount} className="space-y-4 text-xs">
+            <form onSubmit={handleCreateAccount} className="space-y-3 text-xs">
               <div className="space-y-1">
                 <label className="font-bold text-slate-700">Account Type</label>
                 <select
@@ -247,9 +248,9 @@ export const ChartOfAccountsView: React.FC<ChartOfAccountsViewProps> = ({
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700">Account Code (GAAP)</label>
+                  <label className="font-bold text-slate-700">Account Code</label>
                   <input
                     type="text"
                     required
@@ -311,7 +312,7 @@ export const ChartOfAccountsView: React.FC<ChartOfAccountsViewProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Cloud Hosting & SaaS Subscriptions"
+                  placeholder="e.g. Cloud Hosting & Subscriptions"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-900 focus:outline-none focus:border-emerald-500"
@@ -322,13 +323,13 @@ export const ChartOfAccountsView: React.FC<ChartOfAccountsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-semibold"
+                  className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-semibold min-h-[40px]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold shadow-sm"
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold shadow-xs min-h-[40px]"
                 >
                   Save Account
                 </button>

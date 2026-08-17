@@ -127,11 +127,11 @@ export function useCSVImport({
       return { isValid: false, errors: ['No parsed data'], totalDebits: 0, totalCredits: 0, isBalanced: false };
     }
 
-    const errors: string[] = [...parsedResult.errors];
+    const errors: string[] = Array.isArray(parsedResult.errors) ? [...parsedResult.errors] : [];
     let totalDebits = 0;
     let totalCredits = 0;
 
-    parsedResult.extractedEntries.forEach((entry, idx) => {
+    (parsedResult.extractedEntries || []).forEach((entry, idx) => {
       let entryDebits = 0;
       let entryCredits = 0;
 
@@ -153,9 +153,9 @@ export function useCSVImport({
     const isBalanced = Math.abs(totalDebits - totalCredits) < 0.05;
 
     return {
-      isValid: errors.length === 0 && parsedResult.extractedEntries.length > 0,
+      isValid: errors.length === 0 && (parsedResult.extractedEntries?.length || 0) > 0,
       errors,
-      warnings: parsedResult.warnings,
+      warnings: Array.isArray(parsedResult.warnings) ? parsedResult.warnings : [],
       totalDebits,
       totalCredits,
       isBalanced,

@@ -8,10 +8,12 @@ export interface CSVRow {
 export interface ParsedCSVResult {
   fileName: string;
   sourceType: 'qbo' | 'wave' | 'bank_feed' | 'custom';
+  detectedFormat?: string;
   rowCount: number;
   headers: string[];
   rows: CSVRow[];
   extractedEntries: Partial<JournalEntry>[];
+  errors: string[];
   warnings: string[];
 }
 
@@ -221,13 +223,22 @@ export function convertCSVToLedgerEntries(
     });
   });
 
+  const formatNames: Record<string, string> = {
+    qbo: 'QuickBooks Online GL',
+    wave: 'Wave Accounting Export',
+    bank_feed: 'Canadian Bank Statement',
+    custom: 'Standard CSV Ledger',
+  };
+
   return {
     fileName,
     sourceType,
+    detectedFormat: formatNames[sourceType] || 'Auto-Mapped CSV',
     rowCount: rows.length,
     headers,
     rows: rows.slice(0, 10), // sample 10 preview
     extractedEntries: entries,
+    errors: [],
     warnings,
   };
 }

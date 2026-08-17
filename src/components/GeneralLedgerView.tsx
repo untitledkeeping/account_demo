@@ -23,6 +23,8 @@ import {
   UserCheck,
   Briefcase,
   History,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { ClientBusiness, JournalEntry, ChartOfAccount, User } from '../types';
 import { formatCurrency } from '../utils/taxCalculator';
@@ -91,89 +93,73 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       case 'ocr_receipt':
       case 'receipt_ocr':
         return (
-          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
-            <Receipt className="w-3 h-3" />
+          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+            <Receipt className="w-2.5 h-2.5" />
             <span>OCR Receipt</span>
           </span>
         );
       case 'bank_feed':
         return (
-          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-orange-50 text-orange-700 border border-orange-200">
-            <ArrowRightLeft className="w-3 h-3" />
+          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200">
+            <ArrowRightLeft className="w-2.5 h-2.5" />
             <span>Bank Feed</span>
           </span>
         );
       case 'qbo_import':
-        return (
-          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-            <FileText className="w-3 h-3" />
-            <span>QBO Import</span>
-          </span>
-        );
       case 'wave_import':
-        return (
-          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-cyan-50 text-cyan-700 border border-cyan-200">
-            <FileText className="w-3 h-3" />
-            <span>Wave Import</span>
-          </span>
-        );
       case 'csv_import':
         return (
-          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-            <FileText className="w-3 h-3" />
+          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+            <FileText className="w-2.5 h-2.5" />
             <span>CSV Import</span>
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-            <Tag className="w-3 h-3" />
-            <span>Manual Entry</span>
+          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+            <Tag className="w-2.5 h-2.5" />
+            <span>Manual</span>
           </span>
         );
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      {/* Client & Active Bookkeeper Context Header */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6">
+      {/* Client Context Header */}
+      <div className="bg-white rounded-xl sm:rounded-2xl p-5 sm:p-6 border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-xl font-bold text-slate-900">
-              General Ledger (Double-Entry)
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900">
+              General Ledger
             </h1>
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-800 border border-slate-200">
               {client.legalName}
             </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-slate-600">
-            <div className="flex items-center space-x-1.5 bg-emerald-50 text-emerald-900 px-2.5 py-1 rounded-lg border border-emerald-200/80 font-medium">
-              <UserIcon className="w-3.5 h-3.5 text-emerald-600" />
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-2 text-xs text-slate-500">
+            <div className="flex items-center space-x-1.5 bg-emerald-50 text-emerald-900 px-2 py-0.5 rounded-md border border-emerald-200/70 font-medium">
+              <UserIcon className="w-3 h-3 text-emerald-600" />
               <span>
-                Active Bookkeeper: <strong className="text-slate-900">{currentUser.fullName}</strong>
+                Staff: <strong className="text-slate-900">{currentUser.fullName}</strong>
               </span>
-              <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-emerald-200/60 text-emerald-900 border border-emerald-300/50">
+              <span className="text-[9px] uppercase font-bold px-1 py-0.2 rounded bg-emerald-200/60 text-emerald-900">
                 {currentUser.role.replace('_', ' ')}
               </span>
             </div>
 
             <span className="text-slate-300">•</span>
-
-            <span className="text-slate-500">
-              Assigned Client Lead:{' '}
-              <strong className="text-slate-800">{client.assignedBookkeeper || currentUser.fullName}</strong>
-            </span>
+            <span>Client Lead: <strong className="text-slate-700">{client.assignedBookkeeper || currentUser.fullName}</strong></span>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center space-x-3 self-start md:self-center">
+        {/* Header Action Buttons */}
+        <div className="flex items-center space-x-2 sm:space-x-3 self-stretch sm:self-auto">
           <button
             onClick={exportLedgerToCSV}
-            title="Download CSV report with complete staff creator attribution"
-            className="flex items-center space-x-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-colors border border-slate-200"
+            title="Download CSV report with full staff creator attribution"
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-colors border border-slate-200 min-h-[40px]"
           >
             <Download className="w-3.5 h-3.5 text-slate-600" />
             <span>Export CSV</span>
@@ -182,66 +168,66 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
           <button
             id="post-journal-entry-main-btn"
             onClick={onOpenNewEntry}
-            className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-md shadow-emerald-600/20"
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-xs min-h-[40px]"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
-            <span>Post Balanced Entry</span>
+            <span>Post Entry</span>
           </button>
         </div>
       </div>
 
-      {/* Staff Audit Metrics & Live Mathematical Proof Card */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Audit Metrics & Live Equation Proof */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {/* Metric 1: Current User Activity */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
               Entries by {currentUser.fullName.split(' ')[0]}
             </div>
             <div className="text-lg font-bold text-slate-900 mt-0.5">
               {staffStats.currentUserEntriesCount}{' '}
               <span className="text-xs font-normal text-slate-500">
-                of {staffStats.totalEntriesCount} total ({staffStats.totalEntriesCount > 0 ? Math.round((staffStats.currentUserEntriesCount / staffStats.totalEntriesCount) * 100) : 0}%)
+                of {staffStats.totalEntriesCount} ({staffStats.totalEntriesCount > 0 ? Math.round((staffStats.currentUserEntriesCount / staffStats.totalEntriesCount) * 100) : 0}%)
               </span>
             </div>
-            <div className="text-[11px] text-slate-500 mt-1 font-mono">
+            <div className="text-[11px] text-slate-500 mt-0.5 font-mono">
               Volume: {formatCurrency(staffStats.currentUserDebitVolume)}
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-            <UserCheck className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+            <UserCheck className="w-4 h-4" />
           </div>
         </div>
 
         {/* Metric 2: Contributing Staff Team */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-              Contributing Staff
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              Staff Contributors
             </div>
             <div className="text-lg font-bold text-slate-900 mt-0.5">
               {uniqueAuthors.length}{' '}
               <span className="text-xs font-normal text-slate-500">Bookkeepers</span>
             </div>
-            <div className="text-[11px] text-slate-500 mt-1 truncate max-w-[200px]" title={uniqueAuthors.join(', ')}>
+            <div className="text-[11px] text-slate-500 mt-0.5 truncate max-w-[180px]" title={uniqueAuthors.join(', ')}>
               {uniqueAuthors.join(', ')}
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-            <Briefcase className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+            <Briefcase className="w-4 h-4" />
           </div>
         </div>
 
         {/* Metric 3: Mathematical Ledger Equality Balance */}
-        <div className={`p-4 rounded-xl border shadow-sm flex items-center justify-between ${
+        <div className={`p-4 rounded-xl border shadow-xs flex items-center justify-between ${
           isBalanced
-            ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
+            ? 'bg-emerald-50/50 border-emerald-200 text-emerald-950'
             : 'bg-rose-50 border-rose-200 text-rose-950'
         }`}>
           <div>
-            <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 flex items-center space-x-1.5">
-              <span>Equation Status</span>
-              {isBalanced && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+            <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 flex items-center space-x-1">
+              <span>Trial Balance Status</span>
+              {isBalanced && <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
             </div>
             <div className="text-xs font-mono font-bold mt-1 text-slate-900">
               Debits: {formatCurrency(grandTotalDebits)}
@@ -250,7 +236,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
               Credits: {formatCurrency(grandTotalCredits)}
             </div>
           </div>
-          <span className={`px-2.5 py-1 rounded text-[11px] font-bold ${
+          <span className={`px-2.5 py-1 rounded text-[10px] font-bold ${
             isBalanced ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
           }`}>
             {isBalanced ? 'Balanced' : 'Imbalanced'}
@@ -259,27 +245,27 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       </div>
 
       {/* Filter and Search Controls */}
-      <div className="space-y-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+      <div className="space-y-3 bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs">
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           {/* Search Bar */}
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search memo, entry #, line description, or bookkeeper name..."
+              placeholder="Search memo, entry #, line description, or author..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-colors"
+              className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-colors"
             />
           </div>
 
           {/* Quick Staff Filter Tabs */}
-          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs self-start md:self-auto">
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg text-xs">
             <button
               onClick={() => setAuthorFilter('ALL')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-all ${
+              className={`px-3 py-1.5 rounded-md font-medium transition-all min-h-[36px] ${
                 authorFilter === 'ALL'
-                  ? 'bg-white text-slate-900 shadow-sm font-semibold'
+                  ? 'bg-white text-slate-900 shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -287,62 +273,56 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
             </button>
             <button
               onClick={() => setAuthorFilter('MINE')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center space-x-1.5 ${
+              className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center space-x-1.5 min-h-[36px] ${
                 authorFilter === 'MINE'
-                  ? 'bg-emerald-600 text-white shadow-sm font-semibold'
+                  ? 'bg-emerald-600 text-white shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <UserIcon className="w-3.5 h-3.5" />
+              <UserIcon className="w-3 h-3" />
               <span>My Entries ({staffStats.currentUserEntriesCount})</span>
             </button>
           </div>
         </div>
 
         {/* Secondary Filter Row */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 text-xs">
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Specific Author Filter Dropdown */}
-            <div className="flex items-center space-x-1.5 text-slate-500">
-              <UserIcon className="w-3.5 h-3.5 text-slate-400" />
-              <span>Bookkeeper:</span>
+        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-slate-100 text-xs">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            {/* Bookkeeper Dropdown */}
+            <div className="flex items-center space-x-1 text-slate-500">
+              <span>Author:</span>
               <select
                 value={authorFilter}
                 onChange={(e) => setAuthorFilter(e.target.value)}
-                className="bg-slate-50 border border-slate-200 text-xs text-slate-700 font-medium rounded-lg px-2.5 py-1 focus:outline-none focus:border-emerald-500"
+                className="bg-slate-50 border border-slate-200 text-xs text-slate-700 font-medium rounded-lg px-2 py-1 focus:outline-none focus:border-emerald-500"
               >
-                <option value="ALL">All Bookkeepers</option>
+                <option value="ALL">All Authors</option>
                 <option value="MINE">My Entries ({currentUser.fullName})</option>
-                <optgroup label="Filter By Individual Bookkeeper">
-                  {uniqueAuthors.map((author) => (
-                    <option key={author} value={author}>
-                      {author} {author.toLowerCase() === currentUser.fullName.toLowerCase() ? '(You)' : ''}
-                    </option>
-                  ))}
-                </optgroup>
+                {uniqueAuthors.map((author) => (
+                  <option key={author} value={author}>
+                    {author} {author.toLowerCase() === currentUser.fullName.toLowerCase() ? '(You)' : ''}
+                  </option>
+                ))}
               </select>
             </div>
 
             {/* Source Filter */}
-            <div className="flex items-center space-x-1.5 text-slate-500">
-              <Filter className="w-3.5 h-3.5 text-slate-400" />
+            <div className="flex items-center space-x-1 text-slate-500">
               <span>Source:</span>
               <select
                 value={sourceFilter}
                 onChange={(e) => setSourceFilter(e.target.value)}
-                className="bg-slate-50 border border-slate-200 text-xs text-slate-700 font-medium rounded-lg px-2.5 py-1 focus:outline-none focus:border-emerald-500"
+                className="bg-slate-50 border border-slate-200 text-xs text-slate-700 font-medium rounded-lg px-2 py-1 focus:outline-none focus:border-emerald-500"
               >
                 <option value="ALL">All Sources</option>
                 <option value="manual">Manual Entry</option>
                 <option value="ocr_receipt">OCR Receipt</option>
-                <option value="bank_feed">Bank Feed Match</option>
-                <option value="qbo_import">QuickBooks Import</option>
-                <option value="wave_import">Wave Import</option>
-                <option value="csv_import">CSV Batch Import</option>
+                <option value="bank_feed">Bank Feed</option>
+                <option value="csv_import">CSV Import</option>
               </select>
             </div>
 
-            {/* Reversals Only Toggle */}
+            {/* Reversals Only Checkbox */}
             <label className="flex items-center space-x-1.5 cursor-pointer text-slate-600 select-none">
               <input
                 type="checkbox"
@@ -354,7 +334,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
             </label>
           </div>
 
-          {/* Expand / Collapse Actions */}
+          {/* Expand / Collapse */}
           <div className="flex items-center space-x-2 text-slate-500">
             <button
               onClick={expandAll}
@@ -374,7 +354,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       </div>
 
       {/* Journal Entries List */}
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {filteredEntries.map((entry) => {
           let entryDebits = 0;
           let entryCredits = 0;
@@ -383,7 +363,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
             entryCredits += l.credit;
           });
 
-          const isExpanded = expandedEntries[entry.id] !== false; // Default expanded
+          const isExpanded = expandedEntries[entry.id] !== false;
           const isCreatedByCurrentUser = isAuthoredByCurrentUser(entry);
 
           return (
@@ -391,95 +371,84 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
               key={entry.id}
               className={`bg-white rounded-xl border transition-all ${
                 entry.isReversal
-                  ? 'border-amber-200 bg-amber-50/20'
+                  ? 'border-amber-200 bg-amber-50/15'
                   : isCreatedByCurrentUser
-                  ? 'border-emerald-200/90 shadow-sm hover:border-emerald-300'
-                  : 'border-slate-200 shadow-sm hover:border-slate-300'
+                  ? 'border-emerald-200/90 shadow-xs'
+                  : 'border-slate-200 shadow-xs'
               }`}
             >
               {/* Entry Card Header */}
               <div
                 onClick={() => toggleExpand(entry.id)}
-                className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 cursor-pointer select-none border-b border-slate-100"
+                className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 cursor-pointer select-none border-b border-slate-100"
               >
-                <div className="flex items-start sm:items-center space-x-3">
-                  <span className="font-mono font-bold text-xs px-2.5 py-1 rounded bg-slate-900 text-white mt-0.5 sm:mt-0">
+                <div className="flex items-start sm:items-center space-x-2.5 sm:space-x-3">
+                  <span className="font-mono font-bold text-xs px-2 py-1 rounded bg-slate-900 text-white mt-0.5 sm:mt-0 shrink-0">
                     #{entry.entryNumber}
                   </span>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-bold text-sm text-slate-900">{entry.memo}</span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                      <span className="font-bold text-xs sm:text-sm text-slate-900 truncate">{entry.memo}</span>
                       {getSourceBadge(entry.source)}
                       {entry.isReversal && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">
-                          Reversing Entry
+                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300">
+                          Reversal
                         </span>
                       )}
                       {isCreatedByCurrentUser && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center space-x-1">
-                          <UserCheck className="w-3 h-3" />
-                          <span>Posted by You</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center space-x-1">
+                          <UserCheck className="w-2.5 h-2.5" />
+                          <span>You</span>
                         </span>
                       )}
                     </div>
 
-                    {/* Bookkeeper Attribution & Timestamp */}
-                    <div className="text-xs text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                      <span className="flex items-center space-x-1">
-                        <Calendar className="w-3 h-3 text-slate-400" />
-                        <span>Date: {entry.entryDate}</span>
-                      </span>
+                    <div className="text-[11px] text-slate-400 flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                      <span>Date: <strong className="text-slate-600 font-normal">{entry.entryDate}</strong></span>
                       <span>•</span>
-                      <span className="flex items-center space-x-1 text-slate-600">
-                        <UserIcon className="w-3 h-3 text-slate-400" />
-                        <span>Created by:</span>
-                        <strong className="text-slate-800 font-semibold">{entry.createdBy}</strong>
-                      </span>
-                      {entry.postedAt && (
-                        <>
-                          <span>•</span>
-                          <span className="text-[11px] text-slate-400">
-                            {new Date(entry.postedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </>
-                      )}
+                      <span>By: <strong className="text-slate-700">{entry.createdBy}</strong></span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-4 self-end sm:self-center">
-                  <div className="text-right font-mono text-xs">
-                    <div className="text-slate-500 font-sans text-[11px]">Total Balance</div>
-                    <div className="font-bold text-slate-900">{formatCurrency(entryDebits)}</div>
+                <div className="flex items-center justify-between sm:justify-end space-x-3 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-50">
+                  <div className="text-left sm:text-right font-mono text-xs">
+                    <span className="text-slate-400 text-[10px] sm:hidden mr-2">Balance:</span>
+                    <span className="font-bold text-slate-900">{formatCurrency(entryDebits)}</span>
                   </div>
 
-                  {!entry.isReversal && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setReversalCandidate(entry);
-                        setReversalReason(`Reversal of Entry #${entry.entryNumber}: ${entry.memo}`);
-                      }}
-                      title="Post Immutable Reversing Entry under your staff credentials"
-                      className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors border border-transparent hover:border-amber-200"
-                    >
-                      <RotateCcw className="w-4 h-4" />
+                  <div className="flex items-center space-x-1">
+                    {!entry.isReversal && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setReversalCandidate(entry);
+                          setReversalReason(`Reversal of Entry #${entry.entryNumber}: ${entry.memo}`);
+                        }}
+                        title="Post Immutable Reversal Entry"
+                        className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <button className="p-1 text-slate-400 hover:text-slate-600">
+                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </button>
-                  )}
+                  </div>
                 </div>
               </div>
 
-              {/* Multi-Line Ledger Breakdown */}
+              {/* Multi-Line Ledger Table */}
               {isExpanded && (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                  <table className="w-full text-left text-xs min-w-[540px]">
                     <thead>
                       <tr className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
-                        <th className="py-2.5 px-4">Account Code & Name</th>
-                        <th className="py-2.5 px-4">Line Description</th>
-                        <th className="py-2.5 px-4">Tax Code</th>
-                        <th className="py-2.5 px-4 text-right">Debit (CAD)</th>
-                        <th className="py-2.5 px-4 text-right">Credit (CAD)</th>
+                        <th className="py-2 px-3 sm:px-4">Account Code & Name</th>
+                        <th className="py-2 px-3 sm:px-4">Line Description</th>
+                        <th className="py-2 px-3 sm:px-4">Tax Code</th>
+                        <th className="py-2 px-3 sm:px-4 text-right">Debit (CAD)</th>
+                        <th className="py-2 px-3 sm:px-4 text-right">Credit (CAD)</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-mono">
@@ -487,41 +456,41 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                         const acc = accountMap.get(line.accountId);
                         return (
                           <tr key={line.id} className="hover:bg-slate-50/50">
-                            <td className="py-2.5 px-4 font-sans font-medium text-slate-900">
-                              <span className="font-mono text-slate-500 mr-2 font-bold">
+                            <td className="py-2 px-3 sm:px-4 font-sans font-medium text-slate-900">
+                              <span className="font-mono text-slate-500 mr-1.5 font-bold">
                                 {acc?.accountCode || 'N/A'}
                               </span>
                               <span>{acc?.name || 'Unknown Account'}</span>
                             </td>
-                            <td className="py-2.5 px-4 font-sans text-slate-600">
+                            <td className="py-2 px-3 sm:px-4 font-sans text-slate-600">
                               {line.description}
                             </td>
-                            <td className="py-2.5 px-4 font-sans">
+                            <td className="py-2 px-3 sm:px-4 font-sans">
                               {line.taxCode ? (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                   {line.taxCode}
                                 </span>
                               ) : (
                                 <span className="text-slate-300">—</span>
                               )}
                             </td>
-                            <td className="py-2.5 px-4 text-right text-slate-900 font-semibold">
+                            <td className="py-2 px-3 sm:px-4 text-right text-slate-900 font-semibold">
                               {line.debit > 0 ? formatCurrency(line.debit) : '—'}
                             </td>
-                            <td className="py-2.5 px-4 text-right text-slate-900 font-semibold">
+                            <td className="py-2 px-3 sm:px-4 text-right text-slate-900 font-semibold">
                               {line.credit > 0 ? formatCurrency(line.credit) : '—'}
                             </td>
                           </tr>
                         );
                       })}
-                      <tr className="bg-slate-50/80 font-bold text-slate-900 border-t border-slate-200">
-                        <td colSpan={3} className="py-2 px-4 text-right font-sans text-[11px] uppercase tracking-wider text-slate-500">
-                          Total Entry Balance Proof:
+                      <tr className="bg-slate-50/70 font-bold text-slate-900 border-t border-slate-200">
+                        <td colSpan={3} className="py-1.5 px-3 sm:px-4 text-right font-sans text-[10px] uppercase tracking-wider text-slate-500">
+                          Total Balance Proof:
                         </td>
-                        <td className="py-2 px-4 text-right text-emerald-700">
+                        <td className="py-1.5 px-3 sm:px-4 text-right text-emerald-700">
                           {formatCurrency(entryDebits)}
                         </td>
-                        <td className="py-2 px-4 text-right text-emerald-700">
+                        <td className="py-1.5 px-3 sm:px-4 text-right text-emerald-700">
                           {formatCurrency(entryCredits)}
                         </td>
                       </tr>
@@ -534,24 +503,22 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
         })}
 
         {filteredEntries.length === 0 && (
-          <div className="p-12 text-center text-slate-400 bg-white rounded-xl border border-slate-200">
-            <BookOpen className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+          <div className="p-10 text-center text-slate-400 bg-white rounded-xl border border-slate-200">
+            <BookOpen className="w-8 h-8 mx-auto text-slate-300 mb-2" />
             <div className="font-semibold text-slate-700 text-sm">No journal entries match criteria</div>
             <p className="text-xs text-slate-500 mt-1">
-              {authorFilter === 'MINE'
-                ? `You have not created any entries for ${client.legalName} yet. Click "Post Balanced Entry" to record one.`
-                : 'Try adjusting your search terms or filters.'}
+              Try adjusting your search terms or filters.
             </p>
           </div>
         )}
       </div>
 
-      {/* Staff Reversal Confirmation Modal */}
+      {/* Reversal Confirmation Modal */}
       {reversalCandidate && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-xl sm:rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0">
                 <RotateCcw className="w-5 h-5" />
               </div>
               <div>
@@ -564,21 +531,14 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
               </div>
             </div>
 
-            {/* Audit Log Attribution Banner */}
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1.5">
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
               <div className="flex items-center space-x-1.5 text-slate-700 font-semibold">
                 <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span>Audit Attribution Record</span>
+                <span>Audit Attribution</span>
               </div>
               <p className="text-slate-500">
-                This reversal will be permanently appended to the immutable General Ledger under your credentials:
+                Recorded under your credentials: <strong className="text-slate-800">{currentUser.fullName}</strong>
               </p>
-              <div className="font-medium text-slate-800 flex items-center space-x-2 pt-0.5">
-                <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">
-                  {currentUser.fullName}
-                </span>
-                <span className="text-slate-400">({currentUser.role.replace('_', ' ')})</span>
-              </div>
             </div>
 
             <div>
@@ -594,18 +554,18 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
               />
             </div>
 
-            <div className="flex items-center justify-end space-x-3 pt-2">
+            <div className="flex items-center justify-end space-x-2 pt-2">
               <button
                 type="button"
                 onClick={() => setReversalCandidate(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors min-h-[40px]"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleConfirmReversal}
-                className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-amber-600/20"
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs min-h-[40px]"
               >
                 Confirm & Post Reversal
               </button>
