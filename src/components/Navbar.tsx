@@ -9,6 +9,7 @@ import {
   BarChart3,
   UploadCloud,
   Code2,
+  Server,
   ChevronDown,
   Plus,
   ShieldCheck,
@@ -69,7 +70,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'tax-filing', label: 'CRA & RQ Tax', shortLabel: 'Tax Filing', icon: FileCheck2 },
     { id: 'financial-reports', label: 'Financial Reports', shortLabel: 'Reports', icon: BarChart3 },
     { id: 'csv-import', label: 'CSV Import', shortLabel: 'Import', icon: UploadCloud },
-    { id: 'architecture-docs', label: 'Engineering Hub', shortLabel: 'Architecture', icon: Code2 },
+    { id: 'architecture-docs', label: 'Backend & Database', shortLabel: 'Backend / DB', icon: Server },
   ];
 
   const handleTabSelect = (tab: ActiveTab) => {
