@@ -93,15 +93,15 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       case 'ocr_receipt':
       case 'receipt_ocr':
         return (
-          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
-            <Receipt className="w-2.5 h-2.5" />
+          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200/90">
+            <Receipt className="w-2.5 h-2.5 text-slate-500" />
             <span>OCR Receipt</span>
           </span>
         );
       case 'bank_feed':
         return (
-          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200">
-            <ArrowRightLeft className="w-2.5 h-2.5" />
+          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200/90">
+            <ArrowRightLeft className="w-2.5 h-2.5 text-slate-500" />
             <span>Bank Feed</span>
           </span>
         );
@@ -109,15 +109,15 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       case 'wave_import':
       case 'csv_import':
         return (
-          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-            <FileText className="w-2.5 h-2.5" />
+          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200/90">
+            <FileText className="w-2.5 h-2.5 text-slate-500" />
             <span>CSV Import</span>
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-            <Tag className="w-2.5 h-2.5" />
+          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200/90">
+            <Tag className="w-2.5 h-2.5 text-slate-500" />
             <span>Manual</span>
           </span>
         );

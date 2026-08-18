@@ -410,9 +410,9 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
                       onSelectClient(client, 'bank-reconciliation');
                     }}
                     title={`${reconCount} bank feed items awaiting matching`}
-                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-orange-50/80 hover:bg-orange-100 border border-orange-200 text-xs font-semibold text-orange-800 transition-colors"
+                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200/90 text-xs font-semibold text-slate-700 transition-colors shadow-2xs"
                   >
-                    <ArrowRightLeft className="w-3.5 h-3.5 text-orange-600" />
+                    <ArrowRightLeft className="w-3.5 h-3.5 text-slate-500" />
                     <span>{reconCount} To Reconcile</span>
                   </button>
 
@@ -423,9 +423,9 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
                       onSelectClient(client, 'receipts-ocr');
                     }}
                     title={`${recCount} OCR receipts awaiting review`}
-                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-purple-50/80 hover:bg-purple-100 border border-purple-200 text-xs font-semibold text-purple-800 transition-colors"
+                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200/90 text-xs font-semibold text-slate-700 transition-colors shadow-2xs"
                   >
-                    <Receipt className="w-3.5 h-3.5 text-purple-600" />
+                    <Receipt className="w-3.5 h-3.5 text-slate-500" />
                     <span>{recCount} Receipts</span>
                   </button>
 

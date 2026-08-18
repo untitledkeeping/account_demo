@@ -108,7 +108,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           label: 'Bank Feeds',
           icon: ArrowRightLeft,
           badge: bankTxCount > 0 ? `${bankTxCount}` : '5',
-          badgeColor: 'bg-orange-50 text-orange-700 border-orange-200/90 font-bold',
+          badgeColor: 'bg-slate-100 text-slate-700 border-slate-200/80 font-semibold',
         },
         { id: 'chart-of-accounts', label: 'Chart of Accounts', icon: FileSpreadsheet },
         {
@@ -116,7 +116,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           label: 'Receipts & AI OCR',
           icon: Receipt,
           badge: receiptCount > 0 ? `${receiptCount}` : '3',
-          badgeColor: 'bg-purple-50 text-purple-700 border-purple-200/90 font-bold',
+          badgeColor: 'bg-slate-100 text-slate-700 border-slate-200/80 font-semibold',
         },
       ],
     },
@@ -148,8 +148,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     >
       {/* Top Section */}
       <div>
-        {/* Branding Header */}
-        <div className="h-16 flex items-center px-4 border-b border-slate-100 justify-between">
+        {/* Branding Header with Stable Top Toggle Button */}
+        <div className="h-16 flex items-center px-3.5 border-b border-slate-100 justify-between">
           <div
             onClick={() => onSelectTab('firm-overview')}
             className="flex items-center space-x-3 cursor-pointer group min-w-0"
@@ -169,15 +169,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
 
-          {!isCollapsed && (
-            <button
-              onClick={onToggleCollapse}
-              className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-              title="Collapse Sidebar"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-          )}
+          {/* Toggle Button Always Stays in Top Header */}
+          <button
+            onClick={onToggleCollapse}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
+            title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+          >
+            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          </button>
         </div>
 
         {/* Wave-Style "+ Create New" Action Button */}
@@ -221,9 +220,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   setIsCreateMenuOpen(false);
                   onSelectTab('receipts-ocr');
                 }}
-                className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-purple-50 hover:text-purple-900 rounded-lg flex items-center space-x-2 transition-colors"
+                className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 rounded-lg flex items-center space-x-2 transition-colors"
               >
-                <Receipt className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                <Receipt className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                 <span>Upload & Scan Receipt</span>
               </button>
 
@@ -315,7 +314,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                             {!isCollapsed && item.badge !== undefined && (
                               <span
-                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
                                   item.badgeColor || 'bg-slate-100 text-slate-700 border-slate-200'
                                 }`}
                               >
@@ -334,7 +333,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Bottom Footer: Practice Settings, User Persona, and Toggle */}
+      {/* Bottom Footer: Practice Settings & User Persona */}
       <div className="p-3 border-t border-slate-100 space-y-2 bg-slate-50/60">
         {/* Practice Settings Trigger */}
         <button
@@ -423,17 +422,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
         </div>
-
-        {/* Collapsed Expand Toggle */}
-        {isCollapsed && (
-          <button
-            onClick={onToggleCollapse}
-            className="w-full flex items-center justify-center p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-            title="Expand Sidebar"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        )}
       </div>
     </motion.aside>
   );
