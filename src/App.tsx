@@ -6,6 +6,7 @@ import {
   AccountingProvider,
   useAccounting,
 } from './context/AccountingContext';
+import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
 import { FirmOverview } from './components/FirmOverview';
 import { GeneralLedgerView } from './components/GeneralLedgerView';
@@ -18,6 +19,7 @@ import { CSVImportView } from './components/CSVImportView';
 import { ArchitectureHub } from './components/ArchitectureHub';
 import { NewJournalEntryModal } from './components/NewJournalEntryModal';
 import { NewClientModal } from './components/NewClientModal';
+import { PracticeSettingsModal } from './components/PracticeSettingsModal';
 
 function MainAppContent() {
   const {
@@ -48,123 +50,144 @@ function MainAppContent() {
 
   const [isNewEntryOpen, setIsNewEntryOpen] = useState(false);
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-100/90 text-slate-900 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">
-      {/* Top Main & Desktop Tab Navigation */}
-      <Navbar
-        firm={firm}
-        clients={clients}
-        activeClient={activeClient}
-        onSelectClient={selectClient}
+    <div className="flex h-screen bg-slate-100/90 text-slate-900 overflow-hidden font-sans selection:bg-emerald-500 selection:text-slate-950">
+      {/* Collapsible Left Navigation Sidebar */}
+      <Sidebar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
+        firm={firm}
         currentUser={currentUser}
         onSwitchUser={setCurrentUser}
         allUsers={users}
-        onOpenNewEntry={() => setIsNewEntryOpen(true)}
-        onOpenNewClient={() => setIsNewClientOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        bankTxCount={bankTxCounts[activeClient.id] || 0}
+        receiptCount={receiptCounts[activeClient.id] || 0}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
 
-      {/* Main Workspace Area with Fluid View Transitions */}
-      <main className="flex-1 pb-16">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab + '-' + activeClient.id}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.16, ease: 'easeOut' }}
-          >
-            {activeTab === 'firm-overview' && (
-              <FirmOverview
-                firm={firm}
-                clients={clients}
-                onSelectClient={selectClient}
-                onOpenNewClient={() => setIsNewClientOpen(true)}
-                bankTxCounts={bankTxCounts}
-                receiptCounts={receiptCounts}
-                accounts={clientAccounts}
-                entries={clientEntries}
-              />
-            )}
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        {/* Top Breadcrumb Context Header */}
+        <Navbar
+          firm={firm}
+          clients={clients}
+          activeClient={activeClient}
+          onSelectClient={selectClient}
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          currentUser={currentUser}
+          onSwitchUser={setCurrentUser}
+          allUsers={users}
+          onOpenNewEntry={() => setIsNewEntryOpen(true)}
+          onOpenNewClient={() => setIsNewClientOpen(true)}
+          onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
 
-            {activeTab === 'general-ledger' && (
-              <GeneralLedgerView
-                client={activeClient}
-                entries={clientEntries}
-                accounts={clientAccounts}
-                currentUser={currentUser}
-                onOpenNewEntry={() => setIsNewEntryOpen(true)}
-                onReverseEntry={reverseJournalEntry}
-              />
-            )}
+        {/* View Transition Stage */}
+        <main className="flex-1 pb-16">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab + '-' + activeClient.id}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.16, ease: 'easeOut' }}
+            >
+              {activeTab === 'firm-overview' && (
+                <FirmOverview
+                  firm={firm}
+                  clients={clients}
+                  onSelectClient={selectClient}
+                  onOpenNewClient={() => setIsNewClientOpen(true)}
+                  bankTxCounts={bankTxCounts}
+                  receiptCounts={receiptCounts}
+                  accounts={clientAccounts}
+                  entries={clientEntries}
+                />
+              )}
 
-            {activeTab === 'bank-reconciliation' && (
-              <BankReconciliationView
-                client={activeClient}
-                transactions={clientTransactions}
-                accounts={clientAccounts}
-                currentUser={currentUser}
-                onReconcileTransaction={reconcileBankTransaction}
-              />
-            )}
+              {activeTab === 'general-ledger' && (
+                <GeneralLedgerView
+                  client={activeClient}
+                  entries={clientEntries}
+                  accounts={clientAccounts}
+                  currentUser={currentUser}
+                  onOpenNewEntry={() => setIsNewEntryOpen(true)}
+                  onReverseEntry={reverseJournalEntry}
+                />
+              )}
 
-            {activeTab === 'chart-of-accounts' && (
-              <ChartOfAccountsView
-                client={activeClient}
-                accounts={clientAccounts}
-                entries={clientEntries}
-                onAddAccount={addAccount}
-              />
-            )}
+              {activeTab === 'bank-reconciliation' && (
+                <BankReconciliationView
+                  client={activeClient}
+                  transactions={clientTransactions}
+                  accounts={clientAccounts}
+                  currentUser={currentUser}
+                  onReconcileTransaction={reconcileBankTransaction}
+                />
+              )}
 
-            {activeTab === 'receipts-ocr' && (
-              <ReceiptOCRView
-                client={activeClient}
-                receipts={clientReceipts}
-                accounts={clientAccounts}
-                currentUser={currentUser}
-                onScanReceipt={scanReceiptWithAI}
-                onPostToLedger={postReceiptToLedger}
-              />
-            )}
+              {activeTab === 'chart-of-accounts' && (
+                <ChartOfAccountsView
+                  client={activeClient}
+                  accounts={clientAccounts}
+                  entries={clientEntries}
+                  onAddAccount={addAccount}
+                />
+              )}
 
-            {activeTab === 'tax-filing' && (
-              <CanadianTaxReportsView
-                client={activeClient}
-                accounts={clientAccounts}
-                entries={clientEntries}
-                currentUser={currentUser}
-              />
-            )}
+              {activeTab === 'receipts-ocr' && (
+                <ReceiptOCRView
+                  client={activeClient}
+                  receipts={clientReceipts}
+                  accounts={clientAccounts}
+                  currentUser={currentUser}
+                  onScanReceipt={scanReceiptWithAI}
+                  onPostToLedger={postReceiptToLedger}
+                />
+              )}
 
-            {activeTab === 'financial-reports' && (
-              <FinancialReportsView
-                client={activeClient}
-                accounts={clientAccounts}
-                entries={clientEntries}
-              />
-            )}
+              {activeTab === 'tax-filing' && (
+                <CanadianTaxReportsView
+                  client={activeClient}
+                  accounts={clientAccounts}
+                  entries={clientEntries}
+                  currentUser={currentUser}
+                />
+              )}
 
-            {activeTab === 'csv-import' && (
-              <CSVImportView
-                client={activeClient}
-                accounts={clientAccounts}
-                currentUser={currentUser}
-                onBatchImportEntries={batchImportJournalEntries}
-              />
-            )}
+              {activeTab === 'financial-reports' && (
+                <FinancialReportsView
+                  client={activeClient}
+                  accounts={clientAccounts}
+                  entries={clientEntries}
+                />
+              )}
 
-            {activeTab === 'architecture-docs' && (
-              <ArchitectureHub
-                firm={firm}
-                activeClient={activeClient}
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </main>
+              {activeTab === 'csv-import' && (
+                <CSVImportView
+                  client={activeClient}
+                  accounts={clientAccounts}
+                  currentUser={currentUser}
+                  onBatchImportEntries={batchImportJournalEntries}
+                />
+              )}
+
+              {activeTab === 'architecture-docs' && (
+                <ArchitectureHub
+                  firm={firm}
+                  activeClient={activeClient}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </main>
+      </div>
 
       {/* Global Toast Notifications (Sonner Engine) */}
       <Toaster
@@ -196,6 +219,14 @@ function MainAppContent() {
         currentUser={currentUser}
         allUsers={users}
         onAddClient={addClient}
+      />
+
+      {/* Practice Settings Modal */}
+      <PracticeSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        firm={firm}
+        currentUser={currentUser}
       />
     </div>
   );
