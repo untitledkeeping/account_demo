@@ -1,3 +1,4 @@
+// src/hooks/useFinancialReports.ts
 import { useState, useMemo, useCallback } from 'react';
 import {
   ChartOfAccount,
@@ -9,35 +10,76 @@ import {
   generateBalanceSheet,
   generateTrialBalance,
 } from '../utils/ledgerEngine';
+import { StatementExporter } from '../utils/statementExporter';
 
 export interface UseFinancialReportsProps {
   client: ClientBusiness;
   accounts: ChartOfAccount[];
   entries: JournalEntry[];
+  firmName?: string;
+  preparedBy?: string;
 }
 
-export type ReportType = 'pnl' | 'balance_sheet' | 'trial_balance';
+export type ReportType = 'pnl' | 'balance_sheet' | 'trial_balance' | 'gl_detail';
+export type PeriodFilter = 'YTD' | 'Q1' | 'Q2' | 'Q3' | 'Q4' | 'ALL';
 
 export function useFinancialReports({
   client,
   accounts,
   entries,
+  firmName = 'Studio Bookkeeping & Associates Inc.',
+  preparedBy = 'Sarah Tremblay, CPA',
 }: UseFinancialReportsProps) {
   const [reportType, setReportType] = useState<ReportType>('pnl');
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('YTD');
   const [isExporting, setIsExporting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Account map for rapid lookups
+  const accountMap = useMemo(() => {
+    const map = new Map<string, ChartOfAccount>();
+    accounts.forEach((a) => map.set(a.id, a));
+    return map;
+  }, [accounts]);
+
+  // Filter entries based on period
+  const filteredEntries = useMemo(() => {
+    if (periodFilter === 'ALL') return entries;
+
+    return entries.filter((e) => {
+      const month = parseInt(e.entryDate.split('-')[1] || '1', 10);
+      if (periodFilter === 'Q1') return month >= 1 && month <= 3;
+      if (periodFilter === 'Q2') return month >= 4 && month <= 6;
+      if (periodFilter === 'Q3') return month >= 7 && month <= 9;
+      if (periodFilter === 'Q4') return month >= 10 && month <= 12;
+      return true; // YTD
+    });
+  }, [entries, periodFilter]);
+
+  // Period label for headers
+  const periodLabel = useMemo(() => {
+    switch (periodFilter) {
+      case 'Q1': return 'First Quarter (Q1 2026)';
+      case 'Q2': return 'Second Quarter (Q2 2026)';
+      case 'Q3': return 'Third Quarter (Q3 2026)';
+      case 'Q4': return 'Fourth Quarter (Q4 2026)';
+      case 'ALL': return 'Full Cumulative Ledger History';
+      default: return 'Year-to-Date (Ended August 2026)';
+    }
+  }, [periodFilter]);
 
   // Generate Accounting Statements
   const pnl = useMemo(() => {
-    return generateProfitAndLoss(accounts, entries);
-  }, [accounts, entries]);
+    return generateProfitAndLoss(accounts, filteredEntries);
+  }, [accounts, filteredEntries]);
 
   const balanceSheet = useMemo(() => {
-    return generateBalanceSheet(accounts, entries);
-  }, [accounts, entries]);
+    return generateBalanceSheet(accounts, filteredEntries);
+  }, [accounts, filteredEntries]);
 
   const trialBalance = useMemo(() => {
-    return generateTrialBalance(accounts, entries);
-  }, [accounts, entries]);
+    return generateTrialBalance(accounts, filteredEntries);
+  }, [accounts, filteredEntries]);
 
   // Balance Sheet Verification Proof
   const balanceSheetProof = useMemo(() => {
@@ -69,93 +111,283 @@ export function useFinancialReports({
     };
   }, [trialBalance]);
 
-  // CSV Export Handler
-  const exportCurrentReportToCSV = useCallback(() => {
+  // GL Detail Filtered Rows
+  const glDetailEntries = useMemo(() => {
+    if (!searchTerm) return filteredEntries;
+    const term = searchTerm.toLowerCase();
+    return filteredEntries.filter(
+      (e) =>
+        e.memo.toLowerCase().includes(term) ||
+        e.entryNumber.toString().includes(term) ||
+        e.createdBy.toLowerCase().includes(term) ||
+        e.lines.some((l) => l.description.toLowerCase().includes(term))
+    );
+  }, [filteredEntries, searchTerm]);
+
+  // Export to Excel / CSV
+  const exportToExcel = useCallback(() => {
     setIsExporting(true);
-    let filename = '';
-    let csvContent = '';
+    const options = { client, firmName, preparedBy, periodLabel };
+    const dateStr = new Date().toISOString().split('T')[0];
+    const safeClient = client.legalName.replace(/[^a-zA-Z0-9]/g, '_');
+
+    try {
+      if (reportType === 'pnl') {
+        const csv = StatementExporter.generatePnlCSV(pnl, options);
+        StatementExporter.downloadCSV(`${safeClient}_Profit_And_Loss_${dateStr}.csv`, csv);
+      } else if (reportType === 'balance_sheet') {
+        const csv = StatementExporter.generateBalanceSheetCSV(balanceSheet, options);
+        StatementExporter.downloadCSV(`${safeClient}_Balance_Sheet_${dateStr}.csv`, csv);
+      } else if (reportType === 'trial_balance') {
+        const csv = StatementExporter.generateTrialBalanceCSV(trialBalance, options);
+        StatementExporter.downloadCSV(`${safeClient}_Trial_Balance_${dateStr}.csv`, csv);
+      } else {
+        const csv = StatementExporter.generateGLDetailCSV(filteredEntries, accountMap, options);
+        StatementExporter.downloadCSV(`${safeClient}_GL_Audit_Trail_${dateStr}.csv`, csv);
+      }
+    } finally {
+      setTimeout(() => setIsExporting(false), 800);
+    }
+  }, [reportType, client, firmName, preparedBy, periodLabel, pnl, balanceSheet, trialBalance, filteredEntries, accountMap]);
+
+  // Export to PDF / Print Window
+  const exportToPDF = useCallback(() => {
+    const options = { client, firmName, preparedBy, periodLabel };
+
+    let title = 'Financial Statement';
+    let tableHtml = '';
 
     if (reportType === 'pnl') {
-      filename = `${client.legalName.replace(/ /g, '_')}_Profit_And_Loss_${new Date().toISOString().split('T')[0]}.csv`;
-      const headers = ['Category', 'Account Code', 'Account Name', 'Amount (CAD)'];
-      const rows: string[][] = [];
+      title = 'Statement of Profit and Loss';
+      tableHtml = `
+        <table>
+          <thead>
+            <tr>
+              <th>Account Code</th>
+              <th>Account Name</th>
+              <th class="num">Amount (CAD)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="section-header"><td colspan="3">1. Operating Revenue</td></tr>
+            ${pnl.revenueAccounts
+              .map(
+                (a) => `<tr>
+                  <td>${a.account.accountCode}</td>
+                  <td>${a.account.name}</td>
+                  <td class="num">${a.netBalance.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</td>
+                </tr>`
+              )
+              .join('')}
+            <tr class="subtotal-row">
+              <td colspan="2">Total Operating Revenue</td>
+              <td class="num">${pnl.totalRevenue.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</td>
+            </tr>
 
-      pnl.revenueAccounts.forEach((a) => {
-        rows.push(['Operating Revenue', a.account.accountCode, `"${a.account.name.replace(/"/g, '""')}"`, a.netBalance.toFixed(2)]);
-      });
-      rows.push(['Total Revenue', '', '', pnl.totalRevenue.toFixed(2)]);
+            ${
+              pnl.totalCogs > 0
+                ? `<tr class="section-header"><td colspan="3">2. Cost of Goods Sold (COGS)</td></tr>
+                ${pnl.cogsAccounts
+                  .map(
+                    (a) => `<tr>
+                    <td>${a.account.accountCode}</td>
+                    <td>${a.account.name}</td>
+                    <td class="num">${a.netBalance.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</td>
+                  </tr>`
+                  )
+                  .join('')}
+                <tr class="subtotal-row">
+                  <td colspan="2">Total Cost of Goods Sold</td>
+                  <td class="num">${pnl.totalCogs.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</td>
+                </tr>
+                <tr class="subtotal-row" style="background: #f1f5f9;">
+                  <td colspan="2">Gross Operating Profit</td>
+                  <td class="num">${pnl.grossProfit.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</td>
+                </tr>`
+                : ''
+            }
 
-      pnl.cogsAccounts.forEach((a) => {
-        rows.push(['COGS', a.account.accountCode, `"${a.account.name.replace(/"/g, '""')}"`, a.netBalance.toFixed(2)]);
-      });
-      rows.push(['Total COGS', '', '', pnl.totalCogs.toFixed(2)]);
-      rows.push(['Gross Operating Profit', '', '', pnl.grossProfit.toFixed(2)]);
+            <tr class="section-header"><td colspan="3">3. Operating Expenses</td></tr>
+            ${pnl.expenseAccounts
+              .map(
+                (a) => `<tr>
+                  <td>${a.account.accountCode}</td>
+                  <td>${a.account.name}</td>
+                  <td class="num">${a.netBalance.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</td>
+                </tr>`
+              )
+              .join('')}
+            <tr class="subtotal-row">
+              <td colspan="2">Total Operating Expenses</td>
+              <td class="num">${pnl.totalExpenses.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</td>
+            </tr>
 
-      pnl.expenseAccounts.forEach((a) => {
-        rows.push(['Operating Expense', a.account.accountCode, `"${a.account.name.replace(/"/g, '""')}"`, a.netBalance.toFixed(2)]);
-      });
-      rows.push(['Total Operating Expenses', '', '', pnl.totalExpenses.toFixed(2)]);
-      rows.push(['Net Operating Income', '', '', pnl.netIncome.toFixed(2)]);
-
-      csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+            <tr class="grand-total">
+              <td colspan="2">NET OPERATING INCOME / (LOSS)</td>
+              <td class="num">${pnl.netIncome.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</td>
+            </tr>
+          </tbody>
+        </table>
+      `;
     } else if (reportType === 'balance_sheet') {
-      filename = `${client.legalName.replace(/ /g, '_')}_Balance_Sheet_${new Date().toISOString().split('T')[0]}.csv`;
-      const headers = ['Section', 'Account Code', 'Account Name', 'Balance (CAD)'];
-      const rows: string[][] = [];
+      title = 'Balance Sheet Statement of Financial Position';
+      tableHtml = `
+        <table>
+          <thead>
+            <tr>
+              <th>Account Code</th>
+              <th>Account Name</th>
+              <th class="num">Balance (CAD)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="section-header"><td colspan="3">Assets</td></tr>
+            ${balanceSheet.assetAccounts
+              .map(
+                (a) => `<tr>
+                  <td>${a.account.accountCode}</td>
+                  <td>${a.account.name}</td>
+                  <td class="num">${a.netBalance.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</td>
+                </tr>`
+              )
+              .join('')}
+            <tr class="subtotal-row">
+              <td colspan="2">Total Assets</td>
+              <td class="num">${balanceSheet.totalAssets.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</td>
+            </tr>
 
-      balanceSheet.assets.forEach((a) => {
-        rows.push(['Assets', a.account.accountCode, `"${a.account.name.replace(/"/g, '""')}"`, a.netBalance.toFixed(2)]);
-      });
-      rows.push(['Total Assets', '', '', balanceSheet.totalAssets.toFixed(2)]);
+            <tr class="section-header"><td colspan="3">Liabilities</td></tr>
+            ${balanceSheet.liabilityAccounts
+              .map(
+                (a) => `<tr>
+                  <td>${a.account.accountCode}</td>
+                  <td>${a.account.name}</td>
+                  <td class="num">${a.netBalance.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</td>
+                </tr>`
+              )
+              .join('')}
+            <tr class="subtotal-row">
+              <td colspan="2">Total Liabilities</td>
+              <td class="num">${balanceSheet.totalLiabilities.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</td>
+            </tr>
 
-      balanceSheet.liabilities.forEach((a) => {
-        rows.push(['Liabilities', a.account.accountCode, `"${a.account.name.replace(/"/g, '""')}"`, a.netBalance.toFixed(2)]);
-      });
-      rows.push(['Total Liabilities', '', '', balanceSheet.totalLiabilities.toFixed(2)]);
+            <tr class="section-header"><td colspan="3">Equity</td></tr>
+            ${balanceSheet.equityAccounts
+              .map(
+                (a) => `<tr>
+                  <td>${a.account.accountCode}</td>
+                  <td>${a.account.name}</td>
+                  <td class="num">${a.netBalance.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</td>
+                </tr>`
+              )
+              .join('')}
+            <tr>
+              <td>-</td>
+              <td>Current Period Net Operating Income</td>
+              <td class="num">${balanceSheet.currentPeriodNetIncome.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</td>
+            </tr>
+            <tr class="subtotal-row">
+              <td colspan="2">Total Equity</td>
+              <td class="num">${balanceSheet.totalEquity.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</td>
+            </tr>
 
-      balanceSheet.equity.forEach((a) => {
-        rows.push(['Equity', a.account.accountCode, `"${a.account.name.replace(/"/g, '""')}"`, a.netBalance.toFixed(2)]);
-      });
-      rows.push(['Current Period Net Income', '', '', balanceSheet.currentYearNetIncome.toFixed(2)]);
-      rows.push(['Total Equity', '', '', balanceSheet.totalEquity.toFixed(2)]);
-      rows.push(['Total Liabilities & Equity', '', '', balanceSheet.totalLiabilitiesAndEquity.toFixed(2)]);
-
-      csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+            <tr class="grand-total">
+              <td colspan="2">TOTAL LIABILITIES & EQUITY</td>
+              <td class="num">${balanceSheet.totalLiabilitiesAndEquity.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+    } else if (reportType === 'trial_balance') {
+      title = 'Trial Balance Working Papers';
+      tableHtml = `
+        <table>
+          <thead>
+            <tr>
+              <th>Account Code</th>
+              <th>Account Name</th>
+              <th>Type</th>
+              <th class="num">Debit (CAD)</th>
+              <th class="num">Credit (CAD)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${trialBalance.items
+              .map(
+                (r) => `<tr>
+                  <td><strong>${r.accountCode}</strong></td>
+                  <td>${r.accountName}</td>
+                  <td>${r.type.toUpperCase()}</td>
+                  <td class="num">${r.debit > 0 ? r.debit.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' }) : '-'}</td>
+                  <td class="num">${r.credit > 0 ? r.credit.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' }) : '-'}</td>
+                </tr>`
+              )
+              .join('')}
+            <tr class="grand-total">
+              <td colspan="3">TRIAL BALANCE TOTALS</td>
+              <td class="num">${trialBalance.totalDebits.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</td>
+              <td class="num">${trialBalance.totalCredits.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}</td>
+            </tr>
+          </tbody>
+        </table>
+      `;
     } else {
-      filename = `${client.legalName.replace(/ /g, '_')}_Trial_Balance_${new Date().toISOString().split('T')[0]}.csv`;
-      const headers = ['Account Code', 'Account Name', 'Type', 'Debit (CAD)', 'Credit (CAD)'];
-      const rows = trialBalance.rows.map((r) => [
-        r.account.accountCode,
-        `"${r.account.name.replace(/"/g, '""')}"`,
-        r.account.type.toUpperCase(),
-        r.debit > 0 ? r.debit.toFixed(2) : '0.00',
-        r.credit > 0 ? r.credit.toFixed(2) : '0.00',
-      ]);
-      rows.push(['TOTALS', '', '', trialBalance.totalDebits.toFixed(2), trialBalance.totalCredits.toFixed(2)]);
-
-      csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+      title = 'General Ledger Audit Trail Register';
+      tableHtml = `
+        <table>
+          <thead>
+            <tr>
+              <th>Entry #</th>
+              <th>Date</th>
+              <th>Memo / Description</th>
+              <th>Account</th>
+              <th class="num">Debit</th>
+              <th class="num">Credit</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredEntries
+              .map((e) =>
+                e.lines
+                  .map((l, idx) => {
+                    const acc = accountMap.get(l.accountId);
+                    return `<tr>
+                    <td>${idx === 0 ? `<strong>#${e.entryNumber}</strong>` : ''}</td>
+                    <td>${idx === 0 ? e.entryDate : ''}</td>
+                    <td>${idx === 0 ? `<strong>${e.memo}</strong><br>` : ''}<span style="color: #64748b;">${l.description}</span></td>
+                    <td>${acc ? `${acc.accountCode} - ${acc.name}` : l.accountId}</td>
+                    <td class="num">${l.debit > 0 ? l.debit.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' }) : '-'}</td>
+                    <td class="num">${l.credit > 0 ? l.credit.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' }) : '-'}</td>
+                  </tr>`;
+                  })
+                  .join('')
+              )
+              .join('')}
+          </tbody>
+        </table>
+      `;
     }
 
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    setTimeout(() => setIsExporting(false), 1500);
-  }, [reportType, client.legalName, pnl, balanceSheet, trialBalance]);
+    StatementExporter.printStatementWindow(title, tableHtml, options);
+  }, [reportType, client, firmName, preparedBy, periodLabel, pnl, balanceSheet, trialBalance, filteredEntries, accountMap]);
 
   return {
     reportType,
     setReportType,
+    periodFilter,
+    setPeriodFilter,
+    periodLabel,
+    searchTerm,
+    setSearchTerm,
     pnl,
     balanceSheet,
     trialBalance,
+    glDetailEntries,
+    accountMap,
     balanceSheetProof,
     trialBalanceProof,
     isExporting,
-    exportCurrentReportToCSV,
+    exportToExcel,
+    exportToPDF,
   };
 }

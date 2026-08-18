@@ -41,6 +41,7 @@ function MainAppContent() {
     clientReceipts,
     postReceiptToLedger,
     addSimulatedReceipt,
+    scanReceiptWithAI,
     bankTxCounts,
     receiptCounts,
     toasts,
@@ -121,6 +122,7 @@ function MainAppContent() {
             currentUser={currentUser}
             onPostReceiptToLedger={postReceiptToLedger}
             onAddSimulatedReceipt={addSimulatedReceipt}
+            onScanReceiptWithAI={scanReceiptWithAI}
           />
         )}
 

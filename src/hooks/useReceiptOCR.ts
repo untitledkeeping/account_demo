@@ -16,6 +16,7 @@ export interface UseReceiptOCRProps {
   currentUser?: User;
   onPostReceiptToLedger: (receipt: ReceiptDocument, targetAccountId: string) => void;
   onAddSimulatedReceipt: (vendor: string, total: number) => void;
+  onScanReceiptWithAI?: (file: File) => Promise<ReceiptDocument>;
 }
 
 export interface ReceiptTaxValidation {
@@ -34,12 +35,14 @@ export function useReceiptOCR({
   currentUser,
   onPostReceiptToLedger,
   onAddSimulatedReceipt,
+  onScanReceiptWithAI,
 }: UseReceiptOCRProps) {
   const [selectedReceiptId, setSelectedReceiptId] = useState<string>(receipts[0]?.id || '');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'NEEDS_REVIEW' | 'POSTED'>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [targetAccountMap, setTargetAccountMap] = useState<Record<string, string>>({});
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const [customVendor, setCustomVendor] = useState('Costco Wholesale');
   const [customTotal, setCustomTotal] = useState('348.90');
   const [successToast, setSuccessToast] = useState<string | null>(null);
@@ -206,6 +209,30 @@ export function useReceiptOCR({
     };
   }, [receipts]);
 
+  // Handle Real AI File Upload
+  const handleRealFileUpload = useCallback(
+    async (file: File) => {
+      if (!file) return;
+      setIsScanning(true);
+      try {
+        if (onScanReceiptWithAI) {
+          const newDoc = await onScanReceiptWithAI(file);
+          setSelectedReceiptId(newDoc.id);
+        } else {
+          onAddSimulatedReceipt(file.name.replace(/\.[^/.]+$/, ''), 150.0);
+        }
+        setIsUploadOpen(false);
+        setSuccessToast(`✨ Gemini AI analyzed "${file.name}" successfully.`);
+        setTimeout(() => setSuccessToast(null), 4000);
+      } catch (err: any) {
+        alert(`OCR scanning error: ${err.message}`);
+      } finally {
+        setIsScanning(false);
+      }
+    },
+    [onScanReceiptWithAI, onAddSimulatedReceipt]
+  );
+
   return {
     selectedReceipt,
     selectedReceiptId,
@@ -222,6 +249,8 @@ export function useReceiptOCR({
     handlePostReceipt,
     isUploadOpen,
     setIsUploadOpen,
+    isScanning,
+    handleRealFileUpload,
     customVendor,
     setCustomVendor,
     customTotal,

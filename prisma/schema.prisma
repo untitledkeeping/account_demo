@@ -1,0 +1,179 @@
+// prisma/schema.prisma
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Firm {
+  id                 String           @id @default(uuid())
+  name               String
+  subscriptionTier   String           @default("practice_flagship")
+  activeClientLimit  Int              @default(15)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  users              User[]
+  clients            ClientBusiness[]
+}
+
+model User {
+  id                String   @id @default(uuid())
+  firmId            String
+  email             String   @unique
+  fullName          String
+  role              String   @default("staff_bookkeeper")
+  twoFactorEnabled  Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  firm              Firm     @relation(fields: [firmId], references: [id], onDelete: Cascade)
+}
+
+model ClientBusiness {
+  id                 String            @id @default(uuid())
+  firmId             String
+  legalName          String
+  operatingName      String?
+  businessNumber     String?           // 9-digit CRA Business Number (BN9 / NEQ)
+  provinceCode       String            @default("QC") // QC, ON, BC, AB, etc.
+  reportingFrequency String            @default("quarterly") // monthly, quarterly, annual
+  gstRegistered      Boolean           @default(true)
+  gstNumber          String?
+  qstRegistered      Boolean           @default(true)
+  qstNumber          String?
+  fiscalYearEndMonth Int               @default(12)
+  currency           String            @default("CAD")
+  isActive           Boolean           @default(true)
+  status             String            @default("Up to Date")
+  lastClosedMonth    String            @default("2026-06")
+  assignedBookkeeper String?
+  notes              String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  firm               Firm              @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  accounts           ChartOfAccount[]
+  journalEntries     JournalEntry[]
+  bankTransactions   BankTransaction[]
+  receipts           Receipt[]
+
+  @@index([firmId])
+}
+
+model ChartOfAccount {
+  id                 String            @id @default(uuid())
+  clientBusinessId   String
+  accountCode        String            // 4-digit standardized code (e.g. 1010, 1020, 2150, 4010)
+  name               String
+  type               String            // asset, liability, equity, revenue, expense
+  classification     String            // bank, trust_escrow, accounts_receivable, current_asset, sales_tax_payable, etc.
+  currency           String            @default("CAD")
+  isActive           Boolean           @default(true)
+  isSystem           Boolean           @default(false)
+  createdAt          DateTime          @default(now())
+  client             ClientBusiness    @relation(fields: [clientBusinessId], references: [id], onDelete: Cascade)
+  lines              LedgerLine[]
+  bankTransactions   BankTransaction[]
+  suggestedReceipts  Receipt[]
+
+  @@unique([clientBusinessId, accountCode])
+  @@index([clientBusinessId])
+}
+
+model JournalEntry {
+  id                      String            @id @default(uuid())
+  clientBusinessId        String
+  entryNumber             Int
+  entryDate               String            // YYYY-MM-DD
+  memo                    String
+  source                  String            @default("manual") // manual, bank_feed, ocr_receipt, csv_import, reversal
+  status                  String            @default("posted") // draft, posted, reversed
+  createdBy               String
+  postedAt                DateTime          @default(now())
+  isReversal              Boolean           @default(false)
+  reversalOfEntryId       String?
+  reversalOf              JournalEntry?     @relation("Reversals", fields: [reversalOfEntryId], references: [id])
+  reversals               JournalEntry[]    @relation("Reversals")
+  client                  ClientBusiness    @relation(fields: [clientBusinessId], references: [id], onDelete: Cascade)
+  lines                   LedgerLine[]
+  matchedBankTransactions  BankTransaction[]
+  postedReceipts          Receipt[]
+
+  @@index([clientBusinessId, entryDate])
+}
+
+model LedgerLine {
+  id             String         @id @default(uuid())
+  journalEntryId String
+  accountId      String
+  description    String
+  debit          Float          @default(0.0)
+  credit         Float          @default(0.0)
+  taxCode        String?        // GST_5, QST_9_975, GST_QST, HST_13, HST_15, EXEMPT, ZERO_RATED, NONE
+  taxAmount      Float?
+  journalEntry   JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account        ChartOfAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([journalEntryId])
+  @@index([accountId])
+}
+
+model BankTransaction {
+  id                    String          @id @default(uuid())
+  clientBusinessId      String
+  accountId             String          // associated bank account (COA)
+  externalTransactionId String
+  transactionDate       String          // YYYY-MM-DD
+  description           String
+  amount                Float           // Negative for outflow, Positive for inflow
+  isReconciled          Boolean         @default(false)
+  matchedJournalEntryId String?
+  suggestedAccountId    String?
+  suggestedTaxCode      String?
+  confidenceScore       Float?
+  categoryHint          String?
+  createdAt             DateTime        @default(now())
+  client                ClientBusiness  @relation(fields: [clientBusinessId], references: [id], onDelete: Cascade)
+  bankAccount           ChartOfAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  matchedJournalEntry   JournalEntry?   @relation(fields: [matchedJournalEntryId], references: [id])
+
+  @@index([clientBusinessId, isReconciled])
+}
+
+model Receipt {
+  id                 String          @id @default(uuid())
+  clientBusinessId   String
+  uploadedBy         String
+  fileName           String
+  fileUrl            String?
+  uploadedAt         DateTime        @default(now())
+  status             String          @default("extracted") // pending_ocr, pending_review, extracted, matched, posted, rejected
+  extractedVendor    String
+  extractedDate      String
+  extractedTotal     Float
+  extractedGst       Float           @default(0.0)
+  extractedQst       Float           @default(0.0)
+  extractedSubtotal  Float
+  suggestedAccountId String?
+  notes              String?
+  postedEntryId      String?
+  client             ClientBusiness  @relation(fields: [clientBusinessId], references: [id], onDelete: Cascade)
+  suggestedAccount   ChartOfAccount? @relation(fields: [suggestedAccountId], references: [id])
+  postedEntry        JournalEntry?   @relation(fields: [postedEntryId], references: [id])
+
+  @@index([clientBusinessId, status])
+}
+
+model AuditLog {
+  id               String          @id @default(uuid())
+  firmId           String?
+  clientBusinessId String?
+  userId           String?
+  action           String          // e.g. "POST_JOURNAL_ENTRY", "REVERSE_ENTRY", "RECONCILE_BANK_TX"
+  entityType       String          // "JournalEntry", "BankTransaction", etc.
+  entityId         String
+  details          String?         // JSON stringified summary
+  createdAt        DateTime        @default(now())
+
+  @@index([clientBusinessId, createdAt])
+}

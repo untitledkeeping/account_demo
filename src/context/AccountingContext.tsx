@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Firm,
   User,
@@ -23,6 +23,7 @@ import {
 } from '../data/mockData';
 import { createReversalJournalEntry } from '../utils/ledgerEngine';
 import { extractTaxesFromGrossTotal } from '../utils/taxCalculator';
+import { api } from '../services/api';
 
 export interface ToastMessage {
   id: string;
@@ -73,6 +74,7 @@ export interface AccountingContextType {
   clientReceipts: ReceiptDocument[];
   postReceiptToLedger: (receipt: ReceiptDocument, targetAccountId: string) => void;
   addSimulatedReceipt: (vendor: string, total: number) => void;
+  scanReceiptWithAI: (file: File) => Promise<ReceiptDocument>;
 
   // Aggregated Practice Metrics
   bankTxCounts: Record<string, number>;
@@ -170,6 +172,63 @@ export const AccountingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return counts;
   }, [receipts]);
 
+  // Sync API context
+  useEffect(() => {
+    api.setContext(firm.id, currentUser.id, currentUser.fullName);
+  }, [firm.id, currentUser.id, currentUser.fullName]);
+
+  // Initial load & client switch synchronization from REST API
+  useEffect(() => {
+    let isMounted = true;
+    async function loadData() {
+      try {
+        const [apiClients, apiAccounts, apiEntries, apiBankTx, apiReceipts] = await Promise.all([
+          api.getClients().catch(() => null),
+          api.getAccounts(activeClientId).catch(() => null),
+          api.getJournalEntries(activeClientId).catch(() => null),
+          api.getBankTransactions(activeClientId).catch(() => null),
+          api.getReceipts(activeClientId).catch(() => null),
+        ]);
+
+        if (!isMounted) return;
+
+        if (apiClients && apiClients.length > 0) {
+          setClients(apiClients);
+        }
+        if (apiAccounts && apiAccounts.length > 0) {
+          setAccounts((prev) => {
+            const others = prev.filter((a) => a.clientBusinessId !== activeClientId);
+            return [...others, ...apiAccounts];
+          });
+        }
+        if (apiEntries && apiEntries.length > 0) {
+          setJournalEntries((prev) => {
+            const others = prev.filter((e) => e.clientBusinessId !== activeClientId);
+            return [...others, ...apiEntries];
+          });
+        }
+        if (apiBankTx && apiBankTx.length > 0) {
+          setBankTransactions((prev) => {
+            const others = prev.filter((t) => t.clientBusinessId !== activeClientId);
+            return [...others, ...apiBankTx];
+          });
+        }
+        if (apiReceipts && apiReceipts.length > 0) {
+          setReceipts((prev) => {
+            const others = prev.filter((r) => r.clientBusinessId !== activeClientId);
+            return [...others, ...apiReceipts];
+          });
+        }
+      } catch (err) {
+        // Fallback gracefully
+      }
+    }
+    loadData();
+    return () => {
+      isMounted = false;
+    };
+  }, [activeClientId]);
+
   // Switch Active Client
   const selectClient = useCallback(
     (clientOrId: ClientBusiness | string, targetTab?: ActiveTab) => {
@@ -194,6 +253,12 @@ export const AccountingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setClients((prev) => [newClient, ...prev]);
       setActiveClientId(id);
       addToast('success', 'Client Provisioned', `${newClient.legalName} is now ready for bookkeeping.`);
+
+      // Persist to backend API
+      api.createClient(newClientData).catch((err) => {
+        console.warn('API client creation synced locally:', err);
+      });
+
       return newClient;
     },
     [addToast]
@@ -208,6 +273,11 @@ export const AccountingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       };
       setAccounts((prev) => [...prev, newAccount]);
       addToast('success', 'Account Created', `${newAccount.accountCode} - ${newAccount.name}`);
+
+      api.createAccount(accountData.clientBusinessId, accountData).catch((err) => {
+        console.warn('API account creation synced locally:', err);
+      });
+
       return newAccount;
     },
     [addToast]
@@ -218,6 +288,10 @@ export const AccountingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     (entry: JournalEntry) => {
       setJournalEntries((prev) => [entry, ...prev]);
       addToast('success', 'Entry Posted', `Entry #${entry.entryNumber} recorded to general ledger.`);
+
+      api.postJournalEntry(entry.clientBusinessId, entry).catch((err) => {
+        console.warn('API journal entry post synced locally:', err);
+      });
     },
     [addToast]
   );
@@ -232,6 +306,11 @@ export const AccountingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       );
       setJournalEntries((prev) => [reversal, ...prev]);
       addToast('info', 'Reversal Entry Created', `Reversal entry #${reversal.entryNumber} recorded.`);
+
+      api.reverseJournalEntry(originalEntry.clientBusinessId, originalEntry.id).catch((err) => {
+        console.warn('API reversal entry post synced locally:', err);
+      });
+
       return reversal;
     },
     [currentUser.fullName, addToast]
@@ -255,6 +334,10 @@ export const AccountingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       setJournalEntries((prev) => [...fullEntries, ...prev]);
       addToast('success', 'Batch Import Complete', `Imported ${fullEntries.length} journal entries.`);
+
+      api.batchImportEntries(activeClient.id, fullEntries).catch((err) => {
+        console.warn('API batch import synced locally:', err);
+      });
     },
     [activeClient.id, currentUser.fullName, addToast]
   );
@@ -376,6 +459,10 @@ export const AccountingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         prev.map((t) => (t.id === tx.id ? { ...t, isReconciled: true, matchedJournalEntryId: entryId } : t))
       );
       addToast('success', 'Transaction Reconciled', `Matched with general ledger entry #${newJournalEntry.entryNumber}.`);
+
+      api.reconcileBankTransaction(activeClient.id, tx.id, targetAccountId, taxCode).catch((err) => {
+        console.warn('API bank reconciliation synced locally:', err);
+      });
     },
     [activeClient.id, activeClient.provinceCode, clientAccounts, currentUser.fullName, addToast]
   );
@@ -454,6 +541,10 @@ export const AccountingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         )
       );
       addToast('success', 'Receipt Posted', `Created Accounts Payable entry for ${receipt.extractedVendor}.`);
+
+      api.postReceiptToLedger(activeClient.id, receipt.id, targetAccountId).catch((err) => {
+        console.warn('API receipt posting synced locally:', err);
+      });
     },
     [activeClient.id, activeClient.provinceCode, clientAccounts, currentUser.fullName, addToast]
   );
@@ -481,8 +572,55 @@ export const AccountingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       setReceipts((prev) => [newReceipt, ...prev]);
       addToast('info', 'Receipt Uploaded', `AI parsed invoice for ${vendor} ($${total.toFixed(2)} CAD).`);
+
+      api.uploadReceipt(activeClient.id, {
+        vendor,
+        total,
+        suggestedAccountId: newReceipt.suggestedAccountId,
+      }).catch((err) => {
+        console.warn('API receipt upload synced locally:', err);
+      });
     },
     [activeClient.id, activeClient.provinceCode, clientAccounts, currentUser.fullName, addToast]
+  );
+
+  // 9. Real AI OCR Document Scanner (Gemini Multimodal)
+  const scanReceiptWithAI = useCallback(
+    async (file: File): Promise<ReceiptDocument> => {
+      addToast('info', 'Gemini AI Scanning...', `Analyzing ${file.name} with multimodal vision.`);
+
+      // Convert file to base64
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const previewUrl = URL.createObjectURL(file);
+
+      try {
+        const scannedReceipt = await api.scanReceiptOCR(activeClient.id, {
+          fileName: file.name,
+          fileBase64: base64,
+          mimeType: file.type || 'image/jpeg',
+          imageUrl: previewUrl,
+        });
+
+        setReceipts((prev) => [scannedReceipt, ...prev]);
+        addToast(
+          'success',
+          'Invoice Parsed Successfully',
+          `Extracted ${scannedReceipt.extractedVendor} ($${scannedReceipt.extractedTotal.toFixed(2)} CAD).`
+        );
+        return scannedReceipt;
+      } catch (err: any) {
+        console.error('Scan OCR error:', err);
+        addToast('error', 'OCR Processing Error', err.message || 'Failed to process invoice');
+        throw err;
+      }
+    },
+    [activeClient.id, addToast]
   );
 
   const value: AccountingContextType = {
@@ -513,6 +651,7 @@ export const AccountingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     clientReceipts,
     postReceiptToLedger,
     addSimulatedReceipt,
+    scanReceiptWithAI,
     bankTxCounts,
     receiptCounts,
     toasts,

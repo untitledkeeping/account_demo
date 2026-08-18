@@ -31,6 +31,7 @@ interface ReceiptOCRViewProps {
   currentUser: User;
   onPostReceiptToLedger: (receipt: ReceiptDocument, targetAccountId: string) => void;
   onAddSimulatedReceipt: (vendor: string, total: number) => void;
+  onScanReceiptWithAI?: (file: File) => Promise<ReceiptDocument>;
 }
 
 export const ReceiptOCRView: React.FC<ReceiptOCRViewProps> = ({
@@ -40,6 +41,7 @@ export const ReceiptOCRView: React.FC<ReceiptOCRViewProps> = ({
   currentUser,
   onPostReceiptToLedger,
   onAddSimulatedReceipt,
+  onScanReceiptWithAI,
 }) => {
   const {
     selectedReceipt,
@@ -56,6 +58,8 @@ export const ReceiptOCRView: React.FC<ReceiptOCRViewProps> = ({
     handlePostReceipt,
     isUploadOpen,
     setIsUploadOpen,
+    isScanning,
+    handleRealFileUpload,
     customVendor,
     setCustomVendor,
     customTotal,
@@ -71,6 +75,7 @@ export const ReceiptOCRView: React.FC<ReceiptOCRViewProps> = ({
     currentUser,
     onPostReceiptToLedger,
     onAddSimulatedReceipt,
+    onScanReceiptWithAI,
   });
 
   return (
@@ -390,67 +395,160 @@ export const ReceiptOCRView: React.FC<ReceiptOCRViewProps> = ({
         )}
       </div>
 
-      {/* Simulated Upload Modal */}
+      {/* Upload Modal (Real File AI Scanner + Quick Presets) */}
       {isUploadOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50">
-          <div className="bg-white rounded-xl sm:rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in">
+          <div className="bg-white rounded-xl sm:rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center space-x-2">
-                <UploadCloud className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-bold text-sm text-slate-900">Upload Simulated Receipt Document</h3>
+                <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200/60">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">Gemini AI Invoice & Receipt Scanner</h3>
+                  <p className="text-[11px] text-slate-500">Multimodal vision with Canadian GST/HST/QST breakdown</p>
+                </div>
               </div>
               <button
                 onClick={() => setIsUploadOpen(false)}
-                className="text-slate-400 hover:text-slate-600 min-h-[36px] min-w-[36px] flex items-center justify-center"
+                className="text-slate-400 hover:text-slate-600 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleUploadSubmit} className="space-y-3 text-xs">
-              <div className="space-y-1">
-                <label className="font-bold text-slate-700">Vendor / Merchant Name</label>
-                <input
-                  type="text"
-                  required
-                  value={customVendor}
-                  onChange={(e) => setCustomVendor(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-900 focus:outline-none focus:border-emerald-500"
-                />
+            {isScanning ? (
+              <div className="py-12 flex flex-col items-center justify-center space-y-4 text-center">
+                <div className="relative">
+                  <div className="w-14 h-14 rounded-full border-4 border-emerald-500/20 border-t-emerald-600 animate-spin" />
+                  <Sparkles className="w-6 h-6 text-emerald-600 absolute inset-0 m-auto animate-pulse" />
+                </div>
+                <div className="space-y-1">
+                  <div className="font-bold text-sm text-slate-900">Gemini 2.5 Flash Analyzing Invoice...</div>
+                  <p className="text-xs text-slate-500 max-w-xs">
+                    Extracting vendor, subtotal, Canadian sales taxes (GST/QST), and matching Chart of Accounts.
+                  </p>
+                </div>
               </div>
+            ) : (
+              <div className="space-y-4 text-xs">
+                {/* 1. Real File Dropzone */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1.5">
+                    Option A: Upload Real Receipt (Image or PDF)
+                  </label>
+                  <label className="border-2 border-dashed border-emerald-300 hover:border-emerald-500 bg-emerald-50/40 hover:bg-emerald-50/80 rounded-xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-all">
+                    <UploadCloud className="w-8 h-8 text-emerald-600 mb-2" />
+                    <span className="font-bold text-slate-800 text-xs">Click to browse or drop invoice file</span>
+                    <span className="text-[11px] text-slate-500 mt-0.5">Supports PNG, JPG, WEBP, and PDF up to 10MB</span>
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleRealFileUpload(file);
+                      }}
+                    />
+                  </label>
+                </div>
 
-              <div className="space-y-1">
-                <label className="font-bold text-slate-700">Gross Total Amount (CAD)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={customTotal}
-                  onChange={(e) => setCustomTotal(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-slate-900 focus:outline-none focus:border-emerald-500"
-                />
-              </div>
+                {/* 2. Quick Demo Presets */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1.5">
+                    Option B: Quick One-Click Canadian Presets
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onAddSimulatedReceipt('Bell Canada Commercial Fiber', 172.46);
+                        setIsUploadOpen(false);
+                      }}
+                      className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-left transition-colors"
+                    >
+                      <div className="font-bold text-slate-800 text-[11px]">Bell Canada Fiber</div>
+                      <div className="text-[10px] text-slate-500">$172.46 CAD • Telecom (6400)</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onAddSimulatedReceipt('Hydro-Québec (Montréal)', 482.5);
+                        setIsUploadOpen(false);
+                      }}
+                      className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-left transition-colors"
+                    >
+                      <div className="font-bold text-slate-800 text-[11px]">Hydro-Québec</div>
+                      <div className="text-[10px] text-slate-500">$482.50 CAD • Utilities (6200)</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onAddSimulatedReceipt('Costco Wholesale Anjou', 674.82);
+                        setIsUploadOpen(false);
+                      }}
+                      className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-left transition-colors"
+                    >
+                      <div className="font-bold text-slate-800 text-[11px]">Costco Wholesale</div>
+                      <div className="text-[10px] text-slate-500">$674.82 CAD • COGS (5000)</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onAddSimulatedReceipt('Bureau en Gros / Staples', 258.45);
+                        setIsUploadOpen(false);
+                      }}
+                      className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-left transition-colors"
+                    >
+                      <div className="font-bold text-slate-800 text-[11px]">Bureau en Gros</div>
+                      <div className="text-[10px] text-slate-500">$258.45 CAD • Supplies (6100)</div>
+                    </button>
+                  </div>
+                </div>
 
-              <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200/80 text-[11px] text-emerald-900">
-                Canadian sales taxes (GST + QST/HST) will be parsed automatically.
-              </div>
+                {/* 3. Custom Manual Simulation */}
+                <form onSubmit={handleUploadSubmit} className="space-y-3 pt-2 border-t border-slate-100">
+                  <div className="font-bold text-slate-700">Option C: Custom Vendor & Amount</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <input
+                        type="text"
+                        placeholder="Vendor Name"
+                        value={customVendor}
+                        onChange={(e) => setCustomVendor(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-900 focus:outline-none focus:border-emerald-500 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Total CAD"
+                        value={customTotal}
+                        onChange={(e) => setCustomTotal(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-slate-900 focus:outline-none focus:border-emerald-500 text-xs"
+                      />
+                    </div>
+                  </div>
 
-              <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsUploadOpen(false)}
-                  className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-semibold min-h-[40px]"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold shadow-xs min-h-[40px]"
-                >
-                  Process & Extract
-                </button>
+                  <div className="flex justify-end space-x-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsUploadOpen(false)}
+                      className="px-3.5 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-semibold"
+                    >
+                      Close
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold shadow-xs transition-colors"
+                    >
+                      Process Custom Invoice
+                    </button>
+                  </div>
+                </form>
               </div>
-            </form>
+            )}
           </div>
         </div>
       )}
