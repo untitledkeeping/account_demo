@@ -1,8 +1,10 @@
+// src/App.tsx
 import React, { useState } from 'react';
+import { Toaster } from 'sonner';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   AccountingProvider,
   useAccounting,
-  ToastMessage,
 } from './context/AccountingContext';
 import { Navbar } from './components/Navbar';
 import { FirmOverview } from './components/FirmOverview';
@@ -16,7 +18,6 @@ import { CSVImportView } from './components/CSVImportView';
 import { ArchitectureHub } from './components/ArchitectureHub';
 import { NewJournalEntryModal } from './components/NewJournalEntryModal';
 import { NewClientModal } from './components/NewClientModal';
-import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from 'lucide-react';
 
 function MainAppContent() {
   const {
@@ -39,22 +40,18 @@ function MainAppContent() {
     clientTransactions,
     reconcileBankTransaction,
     clientReceipts,
-    postReceiptToLedger,
-    addSimulatedReceipt,
     scanReceiptWithAI,
+    postReceiptToLedger,
     bankTxCounts,
     receiptCounts,
-    toasts,
-    removeToast,
   } = useAccounting();
 
-  // Modal dialog states
   const [isNewEntryOpen, setIsNewEntryOpen] = useState(false);
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-100/70 text-slate-900 flex flex-col font-sans antialiased">
-      {/* Top Practice-First Navigation Bar */}
+    <div className="min-h-screen bg-slate-100/90 text-slate-900 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">
+      {/* Top Main & Desktop Tab Navigation */}
       <Navbar
         firm={firm}
         clients={clients}
@@ -63,137 +60,122 @@ function MainAppContent() {
         activeTab={activeTab}
         onSelectTab={setActiveTab}
         currentUser={currentUser}
-        allUsers={users}
         onSwitchUser={setCurrentUser}
+        allUsers={users}
         onOpenNewEntry={() => setIsNewEntryOpen(true)}
         onOpenNewClient={() => setIsNewClientOpen(true)}
       />
 
-      {/* Main Dynamic Viewport */}
+      {/* Main Workspace Area with Fluid View Transitions */}
       <main className="flex-1 pb-16">
-        {activeTab === 'firm-overview' && (
-          <FirmOverview
-            firm={firm}
-            clients={clients}
-            currentUser={currentUser}
-            bankTxCounts={bankTxCounts}
-            receiptCounts={receiptCounts}
-            onSelectClient={(client, targetTab) => selectClient(client, targetTab || 'general-ledger')}
-            onOpenNewClient={() => setIsNewClientOpen(true)}
-          />
-        )}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab + '-' + activeClient.id}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.16, ease: 'easeOut' }}
+          >
+            {activeTab === 'firm-overview' && (
+              <FirmOverview
+                firm={firm}
+                clients={clients}
+                onSelectClient={selectClient}
+                onOpenNewClient={() => setIsNewClientOpen(true)}
+                bankTxCounts={bankTxCounts}
+                receiptCounts={receiptCounts}
+                accounts={clientAccounts}
+                entries={clientEntries}
+              />
+            )}
 
-        {activeTab === 'general-ledger' && (
-          <GeneralLedgerView
-            client={activeClient}
-            entries={clientEntries}
-            currentUser={currentUser}
-            accounts={clientAccounts}
-            onOpenNewEntry={() => setIsNewEntryOpen(true)}
-            onReverseEntry={reverseJournalEntry}
-          />
-        )}
+            {activeTab === 'general-ledger' && (
+              <GeneralLedgerView
+                client={activeClient}
+                entries={clientEntries}
+                accounts={clientAccounts}
+                currentUser={currentUser}
+                onOpenNewEntry={() => setIsNewEntryOpen(true)}
+                onReverseEntry={reverseJournalEntry}
+              />
+            )}
 
-        {activeTab === 'bank-reconciliation' && (
-          <BankReconciliationView
-            client={activeClient}
-            transactions={clientTransactions}
-            accounts={clientAccounts}
-            currentUser={currentUser}
-            onReconcileTransaction={reconcileBankTransaction}
-          />
-        )}
+            {activeTab === 'bank-reconciliation' && (
+              <BankReconciliationView
+                client={activeClient}
+                transactions={clientTransactions}
+                accounts={clientAccounts}
+                currentUser={currentUser}
+                onReconcileTransaction={reconcileBankTransaction}
+              />
+            )}
 
-        {activeTab === 'chart-of-accounts' && (
-          <ChartOfAccountsView
-            client={activeClient}
-            accounts={clientAccounts}
-            entries={clientEntries}
-            currentUser={currentUser}
-            onAddAccount={addAccount}
-          />
-        )}
+            {activeTab === 'chart-of-accounts' && (
+              <ChartOfAccountsView
+                client={activeClient}
+                accounts={clientAccounts}
+                entries={clientEntries}
+                onAddAccount={addAccount}
+              />
+            )}
 
-        {activeTab === 'receipts-ocr' && (
-          <ReceiptOCRView
-            client={activeClient}
-            receipts={clientReceipts}
-            accounts={clientAccounts}
-            currentUser={currentUser}
-            onPostReceiptToLedger={postReceiptToLedger}
-            onAddSimulatedReceipt={addSimulatedReceipt}
-            onScanReceiptWithAI={scanReceiptWithAI}
-          />
-        )}
+            {activeTab === 'receipts-ocr' && (
+              <ReceiptOCRView
+                client={activeClient}
+                receipts={clientReceipts}
+                accounts={clientAccounts}
+                currentUser={currentUser}
+                onScanReceipt={scanReceiptWithAI}
+                onPostToLedger={postReceiptToLedger}
+              />
+            )}
 
-        {activeTab === 'financial-reports' && (
-          <FinancialReportsView
-            client={activeClient}
-            accounts={clientAccounts}
-            entries={clientEntries}
-          />
-        )}
+            {activeTab === 'tax-filing' && (
+              <CanadianTaxReportsView
+                client={activeClient}
+                accounts={clientAccounts}
+                entries={clientEntries}
+                currentUser={currentUser}
+              />
+            )}
 
-        {activeTab === 'tax-filing' && (
-          <CanadianTaxReportsView
-            client={activeClient}
-            accounts={clientAccounts}
-            entries={clientEntries}
-            currentUser={currentUser}
-          />
-        )}
+            {activeTab === 'financial-reports' && (
+              <FinancialReportsView
+                client={activeClient}
+                accounts={clientAccounts}
+                entries={clientEntries}
+              />
+            )}
 
-        {activeTab === 'csv-import' && (
-          <CSVImportView
-            client={activeClient}
-            accounts={clientAccounts}
-            currentUser={currentUser}
-            onBatchImportEntries={batchImportJournalEntries}
-          />
-        )}
+            {activeTab === 'csv-import' && (
+              <CSVImportView
+                client={activeClient}
+                accounts={clientAccounts}
+                currentUser={currentUser}
+                onBatchImportEntries={batchImportJournalEntries}
+              />
+            )}
 
-        {activeTab === 'architecture-docs' && (
-          <ArchitectureHub
-            firm={firm}
-            activeClient={activeClient}
-          />
-        )}
+            {activeTab === 'architecture-docs' && (
+              <ArchitectureHub
+                firm={firm}
+                activeClient={activeClient}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
-      {/* Global Toast Notifications Stack */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col space-y-2 pointer-events-none max-w-sm w-full">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`pointer-events-auto p-4 rounded-xl shadow-xl border flex items-start space-x-3 transition-all duration-300 transform translate-y-0 ${
-              toast.type === 'success'
-                ? 'bg-slate-900 text-white border-emerald-500/50'
-                : toast.type === 'error'
-                ? 'bg-rose-950 text-white border-rose-500/50'
-                : toast.type === 'warning'
-                ? 'bg-amber-950 text-white border-amber-500/50'
-                : 'bg-slate-900 text-white border-blue-500/50'
-            }`}
-          >
-            {toast.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />}
-            {toast.type === 'error' && <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />}
-            {toast.type === 'warning' && <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />}
-            {toast.type === 'info' && <Info className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />}
-
-            <div className="flex-1 min-w-0">
-              <div className="font-bold text-xs">{toast.title}</div>
-              {toast.message && <div className="text-[11px] text-slate-300 mt-0.5">{toast.message}</div>}
-            </div>
-
-            <button
-              onClick={() => removeToast(toast.id)}
-              className="text-slate-400 hover:text-white p-1 rounded transition-colors"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        ))}
-      </div>
+      {/* Global Toast Notifications (Sonner Engine) */}
+      <Toaster
+        richColors
+        position="bottom-right"
+        closeButton
+        theme="light"
+        toastOptions={{
+          className: 'border border-slate-200/90 shadow-xl rounded-xl text-xs font-medium',
+        }}
+      />
 
       {/* Post Compound Journal Entry Modal */}
       <NewJournalEntryModal

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import {
   Building2,
   BookOpen,
@@ -292,12 +293,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                 key={item.id}
                 id={`nav-tab-${item.id}`}
                 onClick={() => handleTabSelect(item.id)}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                className={`relative flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors z-10 ${
                   isActive
-                    ? 'bg-emerald-500 text-slate-950 shadow-sm shadow-emerald-500/20 font-bold'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                    ? 'text-slate-950 font-bold'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
+                {isActive && (
+                  <motion.div
+                    layoutId="activeNavPill"
+                    className="absolute inset-0 bg-emerald-500 rounded-lg shadow-sm shadow-emerald-500/20 -z-10"
+                    transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                  />
+                )}
                 <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-slate-950' : 'text-slate-400'}`} />
                 <span>{item.label}</span>
               </button>

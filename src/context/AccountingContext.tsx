@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
+import { toast } from 'sonner';
 import {
   Firm,
   User,
@@ -111,6 +112,17 @@ export const AccountingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const addToast = useCallback((type: ToastMessage['type'], title: string, message?: string) => {
+    // Trigger rich sonner toast
+    if (type === 'success') {
+      toast.success(title, { description: message });
+    } else if (type === 'error') {
+      toast.error(title, { description: message });
+    } else if (type === 'warning') {
+      toast.warning(title, { description: message });
+    } else {
+      toast.info(title, { description: message });
+    }
+
     const newToast: ToastMessage = {
       id: `toast-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       type,
