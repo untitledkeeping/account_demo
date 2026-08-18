@@ -1,6 +1,6 @@
 // src/components/Sidebar.tsx
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Building2,
   BookOpen,
@@ -19,7 +19,10 @@ import {
   Layers,
   ChevronDown,
   ChevronsUpDown,
-  Hexagon,
+  Plus,
+  FilePlus2,
+  UserPlus,
+  Upload,
 } from 'lucide-react';
 import { ActiveTab, Firm, User } from '../types';
 
@@ -31,6 +34,8 @@ interface SidebarProps {
   onSwitchUser: (user: User) => void;
   allUsers: User[];
   onOpenSettings: () => void;
+  onOpenNewEntry?: () => void;
+  onOpenNewClient?: () => void;
   bankTxCount?: number;
   receiptCount?: number;
   isCollapsed: boolean;
@@ -38,7 +43,9 @@ interface SidebarProps {
 }
 
 interface NavGroup {
+  id: string;
   title: string;
+  collapsible?: boolean;
   items: {
     id: ActiveTab;
     label: string;
@@ -56,29 +63,51 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSwitchUser,
   allUsers,
   onOpenSettings,
+  onOpenNewEntry,
+  onOpenNewClient,
   bankTxCount = 5,
   receiptCount = 3,
   isCollapsed,
   onToggleCollapse,
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
+
+  // Collapsible section state
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
+    practice: true,
+    bookkeeping: true,
+    tax: true,
+    tools: true,
+  });
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [groupId]: !prev[groupId],
+    }));
+  };
 
   const navGroups: NavGroup[] = [
     {
+      id: 'practice',
       title: 'PRACTICE HUB',
+      collapsible: false,
       items: [
         { id: 'firm-overview', label: 'Firm Portfolio', icon: Building2 },
       ],
     },
     {
+      id: 'bookkeeping',
       title: 'CORE BOOKKEEPING',
+      collapsible: true,
       items: [
         { id: 'general-ledger', label: 'General Ledger', icon: BookOpen },
         {
           id: 'bank-reconciliation',
           label: 'Bank Feeds',
           icon: ArrowRightLeft,
-          badge: bankTxCount > 0 ? bankTxCount : 5,
+          badge: bankTxCount > 0 ? `${bankTxCount}` : '5',
           badgeColor: 'bg-orange-50 text-orange-700 border-orange-200/90 font-bold',
         },
         { id: 'chart-of-accounts', label: 'Chart of Accounts', icon: FileSpreadsheet },
@@ -86,20 +115,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
           id: 'receipts-ocr',
           label: 'Receipts & AI OCR',
           icon: Receipt,
-          badge: receiptCount > 0 ? receiptCount : 3,
+          badge: receiptCount > 0 ? `${receiptCount}` : '3',
           badgeColor: 'bg-purple-50 text-purple-700 border-purple-200/90 font-bold',
         },
       ],
     },
     {
+      id: 'tax',
       title: 'TAX & COMPLIANCE',
+      collapsible: true,
       items: [
         { id: 'tax-filing', label: 'CRA & RQ Tax', icon: FileCheck2 },
         { id: 'financial-reports', label: 'Financial Reports', icon: BarChart3 },
       ],
     },
     {
+      id: 'tools',
       title: 'TOOLS & PLATFORM',
+      collapsible: true,
       items: [
         { id: 'csv-import', label: 'CSV Importer', icon: UploadCloud },
         { id: 'architecture-docs', label: 'Backend & Database', icon: Server },
@@ -113,8 +146,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       transition={{ type: 'spring', stiffness: 350, damping: 30 }}
       className="bg-white border-r border-slate-200/90 flex flex-col justify-between h-screen text-slate-700 select-none z-30 shrink-0 sticky top-0 shadow-xs"
     >
-      {/* Top Firm Branding */}
+      {/* Top Section */}
       <div>
+        {/* Branding Header */}
         <div className="h-16 flex items-center px-4 border-b border-slate-100 justify-between">
           <div
             onClick={() => onSelectTab('firm-overview')}
@@ -146,55 +180,157 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* Navigation Categories */}
-        <div className="py-3 px-3 space-y-4 overflow-y-auto max-h-[calc(100vh-175px)] scrollbar-none">
-          {navGroups.map((group, groupIdx) => (
-            <div key={groupIdx} className="space-y-1">
-              {!isCollapsed && (
-                <div className="px-3 py-1 text-[10px] font-bold tracking-wider uppercase text-slate-400">
-                  {group.title}
-                </div>
-              )}
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
+        {/* Wave-Style "+ Create New" Action Button */}
+        <div className="p-3 pb-1 relative">
+          <button
+            onClick={() => setIsCreateMenuOpen(!isCreateMenuOpen)}
+            className={`w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl flex items-center transition-colors shadow-xs ${
+              isCollapsed
+                ? 'justify-center p-2.5 min-h-[38px]'
+                : 'justify-between px-3.5 py-2.5 text-xs min-h-[38px]'
+            }`}
+            title={isCollapsed ? 'Create New...' : undefined}
+          >
+            <div className="flex items-center space-x-2">
+              <Plus className="w-4 h-4 stroke-[3]" />
+              {!isCollapsed && <span>Create New</span>}
+            </div>
+            {!isCollapsed && <ChevronDown className="w-3.5 h-3.5 text-emerald-200" />}
+          </button>
 
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => onSelectTab(item.id)}
-                    title={isCollapsed ? item.label : undefined}
-                    className={`relative w-full flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-                      isCollapsed ? 'justify-center' : 'justify-between'
-                    } ${
-                      isActive
-                        ? 'bg-emerald-50/80 text-emerald-800 border border-emerald-200/70 font-bold shadow-2xs'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/90'
+          {/* Quick Create Dropdown Menu */}
+          {isCreateMenuOpen && (
+            <div
+              className={`absolute top-14 ${
+                isCollapsed ? 'left-14 w-56' : 'left-3 right-3'
+              } bg-white border border-slate-200 rounded-xl shadow-2xl z-50 p-1.5 animate-in fade-in zoom-in-95 duration-100 space-y-0.5`}
+            >
+              <button
+                onClick={() => {
+                  setIsCreateMenuOpen(false);
+                  if (onOpenNewEntry) onOpenNewEntry();
+                }}
+                className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-emerald-50 hover:text-emerald-900 rounded-lg flex items-center space-x-2 transition-colors"
+              >
+                <FilePlus2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>New Journal Entry</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsCreateMenuOpen(false);
+                  onSelectTab('receipts-ocr');
+                }}
+                className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-purple-50 hover:text-purple-900 rounded-lg flex items-center space-x-2 transition-colors"
+              >
+                <Receipt className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                <span>Upload & Scan Receipt</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsCreateMenuOpen(false);
+                  if (onOpenNewClient) onOpenNewClient();
+                }}
+                className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 rounded-lg flex items-center space-x-2 transition-colors"
+              >
+                <UserPlus className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                <span>Provision Client File</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsCreateMenuOpen(false);
+                  onSelectTab('csv-import');
+                }}
+                className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 rounded-lg flex items-center space-x-2 transition-colors"
+              >
+                <Upload className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                <span>Batch CSV Import</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Collapsible Navigation Categories */}
+        <div className="py-2 px-3 space-y-3 overflow-y-auto max-h-[calc(100vh-230px)] scrollbar-none">
+          {navGroups.map((group) => {
+            const isExpanded = expandedGroups[group.id] !== false;
+
+            return (
+              <div key={group.id} className="space-y-1">
+                {!isCollapsed && (
+                  <div
+                    onClick={() => group.collapsible && toggleGroup(group.id)}
+                    className={`px-3 py-1 text-[10px] font-bold tracking-wider uppercase text-slate-400 flex items-center justify-between ${
+                      group.collapsible ? 'cursor-pointer hover:text-slate-600' : ''
                     }`}
                   >
-                    <div className="flex items-center space-x-2.5 min-w-0">
-                      <Icon
-                        className={`w-4 h-4 shrink-0 ${
-                          isActive ? 'text-emerald-700' : 'text-slate-500'
+                    <span>{group.title}</span>
+                    {group.collapsible && (
+                      <ChevronDown
+                        className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${
+                          isExpanded ? 'transform rotate-0' : 'transform -rotate-90'
                         }`}
                       />
-                      {!isCollapsed && <span className="truncate">{item.label}</span>}
-                    </div>
-
-                    {!isCollapsed && item.badge !== undefined && (
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                          item.badgeColor || 'bg-slate-100 text-slate-700 border-slate-200'
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
                     )}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+                  </div>
+                )}
+
+                {/* Items List with Smooth Collapse */}
+                <AnimatePresence initial={false}>
+                  {(isCollapsed || isExpanded) && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="space-y-0.5 overflow-hidden"
+                    >
+                      {group.items.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = activeTab === item.id;
+
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => onSelectTab(item.id)}
+                            title={isCollapsed ? item.label : undefined}
+                            className={`relative w-full flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                              isCollapsed ? 'justify-center' : 'justify-between'
+                            } ${
+                              isActive
+                                ? 'bg-emerald-50/80 text-emerald-800 border border-emerald-200/70 font-bold shadow-2xs'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/90'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-2.5 min-w-0">
+                              <Icon
+                                className={`w-4 h-4 shrink-0 ${
+                                  isActive ? 'text-emerald-700' : 'text-slate-500'
+                                }`}
+                              />
+                              {!isCollapsed && <span className="truncate">{item.label}</span>}
+                            </div>
+
+                            {!isCollapsed && item.badge !== undefined && (
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                  item.badgeColor || 'bg-slate-100 text-slate-700 border-slate-200'
+                                }`}
+                              >
+                                {item.badge}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
         </div>
       </div>
 

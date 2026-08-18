@@ -15,6 +15,14 @@ import {
   MoreHorizontal,
   ChevronLeft,
   Briefcase,
+  FileSpreadsheet,
+  FileCheck2,
+  Zap,
+  UploadCloud,
+  FilePlus2,
+  ArrowUpRight,
+  BookOpen,
+  BarChart3,
 } from 'lucide-react';
 import { Firm, ClientBusiness, BookkeepingStatus, User, ActiveTab } from '../types';
 import { useFirmOverview } from '../hooks/useFirmOverview';
@@ -25,6 +33,7 @@ interface FirmOverviewProps {
   currentUser?: User;
   onSelectClient: (client: ClientBusiness, targetTab?: ActiveTab) => void;
   onOpenNewClient: () => void;
+  onOpenNewEntry?: () => void;
   bankTxCounts?: Record<string, number>;
   receiptCounts?: Record<string, number>;
 }
@@ -35,6 +44,7 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
   currentUser,
   onSelectClient,
   onOpenNewClient,
+  onOpenNewEntry,
   bankTxCounts = {},
   receiptCounts = {},
 }) => {
@@ -59,6 +69,8 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
   });
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeMenuClientId, setActiveMenuClientId] = useState<string | null>(null);
+
   const pageSize = 4;
   const totalPages = Math.ceil(filteredClients.length / pageSize) || 1;
   const paginatedClients = filteredClients.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -118,6 +130,50 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Top Wave-Style Quick Actions Ribbon */}
+      <div className="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center space-x-2 text-xs font-bold text-slate-700">
+          <Zap className="w-4 h-4 text-emerald-600" />
+          <span>Quick Actions:</span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {onOpenNewEntry && (
+            <button
+              onClick={onOpenNewEntry}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-emerald-50 text-slate-800 hover:text-emerald-900 border border-slate-200/90 hover:border-emerald-300 text-xs font-semibold transition-all shadow-2xs"
+            >
+              <FilePlus2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>+ New Journal Entry</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => onSelectClient(clients[0], 'receipts-ocr')}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-purple-50 text-slate-800 hover:text-purple-900 border border-slate-200/90 hover:border-purple-300 text-xs font-semibold transition-all shadow-2xs"
+          >
+            <Receipt className="w-3.5 h-3.5 text-purple-600" />
+            <span>+ Scan Receipt / Invoice</span>
+          </button>
+
+          <button
+            onClick={() => onSelectClient(clients[0], 'bank-reconciliation')}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-orange-50 text-slate-800 hover:text-orange-900 border border-slate-200/90 hover:border-orange-300 text-xs font-semibold transition-all shadow-2xs"
+          >
+            <ArrowRightLeft className="w-3.5 h-3.5 text-orange-600" />
+            <span>+ Reconcile Bank Feed</span>
+          </button>
+
+          <button
+            onClick={() => onSelectClient(clients[0], 'tax-filing')}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-800 hover:text-blue-900 border border-slate-200/90 hover:border-blue-300 text-xs font-semibold transition-all shadow-2xs"
+          >
+            <FileCheck2 className="w-3.5 h-3.5 text-blue-600" />
+            <span>+ CRA & RQ Tax Filing</span>
+          </button>
+        </div>
+      </div>
+
       {/* Top Header Row */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -276,20 +332,29 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
           </div>
         </div>
 
+        {/* Explicit Table Column Header Bar */}
+        <div className="hidden lg:grid grid-cols-12 gap-4 px-5 py-2.5 bg-slate-50/80 border-b border-slate-100 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+          <div className="col-span-4">Client Business</div>
+          <div className="col-span-3">Status & Notes</div>
+          <div className="col-span-2">Fiscal Year-End & Tax</div>
+          <div className="col-span-3 text-right">Pending Actions</div>
+        </div>
+
         {/* Client Rows List */}
         <div className="divide-y divide-slate-100">
           {paginatedClients.map((client) => {
             const reconCount = bankTxCounts[client.id] || 5;
             const recCount = receiptCounts[client.id] || 3;
+            const isMenuOpen = activeMenuClientId === client.id;
 
             return (
               <div
                 key={client.id}
                 onClick={() => onSelectClient(client, 'general-ledger')}
-                className="p-5 hover:bg-slate-50/70 transition-colors cursor-pointer flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 group"
+                className="p-5 hover:bg-slate-50/70 transition-colors cursor-pointer flex flex-col lg:grid lg:grid-cols-12 gap-4 items-start lg:items-center group relative"
               >
-                {/* Left: Client Avatar & Identity */}
-                <div className="flex items-start space-x-3.5 min-w-0 max-w-md">
+                {/* Column 1: Client Identity (4 cols) */}
+                <div className="lg:col-span-4 flex items-start space-x-3.5 min-w-0">
                   <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0">
                     {getClientInitials(client.legalName)}
                   </div>
@@ -301,21 +366,10 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
                       <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 border border-slate-200 text-slate-700">
                         {client.provinceCode}
                       </span>
-                      {getStatusBadge(client.status)}
                     </div>
 
-                    <div className="flex items-center space-x-2 text-[11px] text-slate-500 flex-wrap gap-y-1">
-                      <span>BN9: <strong className="text-slate-700">{client.businessNumber.slice(0, 9)}RC0001</strong></span>
-                      <span>•</span>
-                      <span className="text-emerald-700 font-medium">GST/HST Active</span>
-                      {client.provinceCode === 'QC' && (
-                        <>
-                          <span>•</span>
-                          <span className="text-blue-700 font-medium">QST Active</span>
-                        </>
-                      )}
-                      <span>•</span>
-                      <span>FY-End: Month {client.fiscalYearEnd || 12}</span>
+                    <div className="text-[11px] text-slate-500">
+                      BN9: <strong className="text-slate-700">{client.businessNumber.slice(0, 9)}RC0001</strong>
                     </div>
 
                     <div className="text-[11px] text-slate-400">
@@ -324,44 +378,135 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
                   </div>
                 </div>
 
-                {/* Middle: Notes */}
-                <div className="hidden xl:block text-xs text-slate-500 max-w-xs truncate">
-                  <span className="font-semibold text-slate-700">Note:</span> {getClientNotes(client)}
+                {/* Column 2: Status & Notes (3 cols) */}
+                <div className="lg:col-span-3 space-y-1.5 min-w-0">
+                  <div>{getStatusBadge(client.status)}</div>
+                  <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                    <span className="font-semibold text-slate-700">Note:</span> {getClientNotes(client)}
+                  </p>
                 </div>
 
-                {/* Right: Quick Action Badges & Navigation */}
-                <div className="flex items-center space-x-2 self-end lg:self-auto shrink-0">
+                {/* Column 3: Fiscal Year-End & Tax (2 cols) */}
+                <div className="lg:col-span-2 space-y-1 text-[11px] text-slate-600">
+                  <div className="font-semibold text-slate-800">
+                    FY-End: Month {client.fiscalYearEnd || 12}
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <span className="text-emerald-700 font-bold">GST/HST Active</span>
+                  </div>
+                  {client.provinceCode === 'QC' && (
+                    <div className="text-blue-700 font-bold">
+                      QST Active
+                    </div>
+                  )}
+                </div>
+
+                {/* Column 4: Pending Actions (3 cols) */}
+                <div className="lg:col-span-3 flex items-center justify-end space-x-2 w-full lg:w-auto relative">
+                  {/* Recon Button */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onSelectClient(client, 'bank-reconciliation');
                     }}
-                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-xs font-semibold text-slate-700 transition-colors"
+                    title={`${reconCount} bank feed items awaiting matching`}
+                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-orange-50/80 hover:bg-orange-100 border border-orange-200 text-xs font-semibold text-orange-800 transition-colors"
                   >
-                    <ArrowRightLeft className="w-3.5 h-3.5 text-slate-500" />
-                    <span>{reconCount} Recon</span>
+                    <ArrowRightLeft className="w-3.5 h-3.5 text-orange-600" />
+                    <span>{reconCount} To Reconcile</span>
                   </button>
 
+                  {/* Receipts Button */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onSelectClient(client, 'receipts-ocr');
                     }}
-                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-xs font-semibold text-slate-700 transition-colors"
+                    title={`${recCount} OCR receipts awaiting review`}
+                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-purple-50/80 hover:bg-purple-100 border border-purple-200 text-xs font-semibold text-purple-800 transition-colors"
                   >
-                    <Receipt className="w-3.5 h-3.5 text-slate-500" />
+                    <Receipt className="w-3.5 h-3.5 text-purple-600" />
                     <span>{recCount} Receipts</span>
                   </button>
 
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                    className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
-                  >
-                    <MoreHorizontal className="w-4 h-4" />
-                  </button>
+                  {/* Three-Dots Dropdown Trigger */}
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveMenuClientId(isMenuOpen ? null : client.id);
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                      title="More Options"
+                    >
+                      <MoreHorizontal className="w-4 h-4" />
+                    </button>
 
+                    {/* Three-Dots Menu Dropdown */}
+                    {isMenuOpen && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute right-0 top-8 w-52 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 p-1.5 animate-in fade-in zoom-in-95 duration-100 text-left space-y-0.5"
+                      >
+                        <button
+                          onClick={() => {
+                            setActiveMenuClientId(null);
+                            onSelectClient(client, 'general-ledger');
+                          }}
+                          className="w-full text-left px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-lg flex items-center space-x-2"
+                        >
+                          <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>View General Ledger</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setActiveMenuClientId(null);
+                            onSelectClient(client, 'bank-reconciliation');
+                          }}
+                          className="w-full text-left px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-lg flex items-center space-x-2"
+                        >
+                          <ArrowRightLeft className="w-3.5 h-3.5 text-orange-600" />
+                          <span>Reconcile Bank Feeds</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setActiveMenuClientId(null);
+                            onSelectClient(client, 'receipts-ocr');
+                          }}
+                          className="w-full text-left px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-lg flex items-center space-x-2"
+                        >
+                          <Receipt className="w-3.5 h-3.5 text-purple-600" />
+                          <span>Review OCR Receipts</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setActiveMenuClientId(null);
+                            onSelectClient(client, 'financial-reports');
+                          }}
+                          className="w-full text-left px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-lg flex items-center space-x-2"
+                        >
+                          <BarChart3 className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Financial Statements</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setActiveMenuClientId(null);
+                            onSelectClient(client, 'tax-filing');
+                          }}
+                          className="w-full text-left px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-lg flex items-center space-x-2"
+                        >
+                          <FileCheck2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>CRA & RQ Tax Returns</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Enter Client File Chevron */}
                   <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200/80 flex items-center justify-center text-slate-400 group-hover:text-emerald-700 group-hover:border-emerald-300 transition-colors">
                     <ChevronRight className="w-4 h-4" />
                   </div>

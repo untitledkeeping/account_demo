@@ -64,6 +64,8 @@ function MainAppContent() {
         onSwitchUser={setCurrentUser}
         allUsers={users}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenNewEntry={() => setIsNewEntryOpen(true)}
+        onOpenNewClient={() => setIsNewClientOpen(true)}
         bankTxCount={bankTxCounts[activeClient.id] || 0}
         receiptCount={receiptCounts[activeClient.id] || 0}
         isCollapsed={isSidebarCollapsed}
@@ -104,10 +106,9 @@ function MainAppContent() {
                   clients={clients}
                   onSelectClient={selectClient}
                   onOpenNewClient={() => setIsNewClientOpen(true)}
+                  onOpenNewEntry={() => setIsNewEntryOpen(true)}
                   bankTxCounts={bankTxCounts}
                   receiptCounts={receiptCounts}
-                  accounts={clientAccounts}
-                  entries={clientEntries}
                 />
               )}
 
