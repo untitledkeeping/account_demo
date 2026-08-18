@@ -15,6 +15,7 @@ import {
   Zap,
   Lock,
   ArrowRight,
+  ArrowDown,
   FileCode,
   Globe,
   HardDrive,
@@ -26,6 +27,16 @@ import {
   KeyRound,
   ExternalLink,
   ChevronRight,
+  Building2,
+  Users,
+  Briefcase,
+  Wallet,
+  Receipt,
+  FileText,
+  FileSpreadsheet,
+  HelpCircle,
+  Sparkles,
+  GitBranch,
 } from 'lucide-react';
 import { ClientBusiness, Firm } from '../types';
 
@@ -34,14 +45,23 @@ interface ArchitectureHubProps {
   activeClient: ClientBusiness;
 }
 
+type SubTab =
+  | 'visual_flow'
+  | 'guide'
+  | 'database_ddl'
+  | 'api_specs'
+  | 'frontend_client'
+  | 'api_tester'
+  | 'roadmap';
+
+type EntityNodeType = 'firm' | 'user' | 'client' | 'account' | 'trust_account' | 'ledger' | 'banking' | 'tax';
+
 export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
   firm,
   activeClient,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<
-    'guide' | 'database_ddl' | 'api_specs' | 'frontend_client' | 'api_tester' | 'roadmap'
-  >('guide');
-
+  const [activeSubTab, setActiveSubTab] = useState<SubTab>('visual_flow');
+  const [selectedEntity, setSelectedEntity] = useState<EntityNodeType>('client');
   const [selectedEndpoint, setSelectedEndpoint] = useState<string>('post_journal_entry');
   const [apiResponse, setApiResponse] = useState<string | null>(null);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
@@ -63,6 +83,165 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
     navigator.clipboard.writeText(text);
     setCopiedSection(sectionId);
     setTimeout(() => setCopiedSection(null), 2000);
+  };
+
+  const entityDetails: Record<
+    EntityNodeType,
+    {
+      title: string;
+      cardinality: string;
+      sqlTable: string;
+      foreignKey: string;
+      role: string;
+      explanation: string;
+      sampleData: Record<string, any>;
+    }
+  > = {
+    firm: {
+      title: 'Practice / Accounting Firm (Root Tenant)',
+      cardinality: '1 Firm : N Users | 1 Firm : N Client Businesses (Max 15 in Tier)',
+      sqlTable: 'firms',
+      foreignKey: 'Primary Key (id)',
+      role: 'Top-level tenant boundary. Owns practice settings, subscription limits, and all accounting data.',
+      explanation:
+        'When you arrive at the platform, the Firm represents your Accounting or Bookkeeping Practice. It establishes the global security boundary (SOC-2/CRA compliant multi-tenancy) so no client data is ever leaked outside your practice.',
+      sampleData: {
+        id: firm.id,
+        name: firm.name,
+        subscriptionTier: firm.subscriptionTier,
+        activeClientLimit: firm.activeClientLimit,
+        currentClientCount: 12,
+      },
+    },
+    user: {
+      title: 'Practice Users & Accountants (Staff)',
+      cardinality: 'N Users : 1 Firm | N Users : M Client Businesses',
+      sqlTable: 'users',
+      foreignKey: 'firm_id -> firms.id',
+      role: 'CPAs, Senior Bookkeepers, and Auditors working inside the practice.',
+      explanation:
+        'A Practice has multiple Users (e.g. Firm Owner, Senior CPA, Staff Bookkeeper). Each User can be assigned to manage specific Client Businesses or oversee the entire firm portfolio.',
+      sampleData: {
+        id: 'user-cpa-1',
+        firmId: firm.id,
+        fullName: 'Sarah Jenkins, CPA',
+        role: 'senior_accountant',
+        assignedClients: ['client-apex-1', 'client-northstar-2'],
+      },
+    },
+    client: {
+      title: 'Client Businesses (Corporate Entities)',
+      cardinality: '1 Client Business : 1 Firm | 1 Client Business : N Accounts',
+      sqlTable: 'client_businesses',
+      foreignKey: 'firm_id -> firms.id',
+      role: 'Individual business entities (e.g. Apex Creative Studio Inc.) under the practice 15-business boundary.',
+      explanation:
+        'The Practice manages multiple Client Businesses. Each client is a distinct legal entity in Canada with its own 9-digit CRA Business Number (BN), provincial tax jurisdiction (QC, ON, BC, AB), and independent books.',
+      sampleData: {
+        id: activeClient.id,
+        firmId: firm.id,
+        legalName: activeClient.legalName,
+        businessNumber: activeClient.businessNumber,
+        provinceCode: activeClient.provinceCode,
+        reportingFrequency: activeClient.reportingFrequency,
+      },
+    },
+    account: {
+      title: 'Chart of Accounts (General Ledger Accounts)',
+      cardinality: '1 Client Business : N Accounts',
+      sqlTable: 'chart_of_accounts',
+      foreignKey: 'client_business_id -> client_businesses.id',
+      role: 'Standard Canadian 4-digit GL accounts (Operating Bank, AR, AP, Revenue, Expenses, GST/QST/HST).',
+      explanation:
+        'Each Client Business owns its own Chart of Accounts (COA). Standardized 4-digit numbering: 1000s = Assets, 2000s = Liabilities (including Sales Tax Payable), 3000s = Equity, 4000s = Revenue, 5000s+ = Expenses.',
+      sampleData: {
+        id: 'acc-1010',
+        clientBusinessId: activeClient.id,
+        code: '1010',
+        name: 'Operating Chequing Account (CAD)',
+        type: 'asset',
+        classification: 'bank',
+        currentBalance: 42150.2,
+      },
+    },
+    trust_account: {
+      title: 'Trust & Escrow Accounts (Client Retainers / Fiduciary)',
+      cardinality: '1 Client Business : N Trust Accounts (Classification: trust_escrow)',
+      sqlTable: 'chart_of_accounts (classification = trust_escrow)',
+      foreignKey: 'client_business_id -> client_businesses.id',
+      role: 'Dedicated fiduciary bank accounts for holding unearned client retainers or third-party funds.',
+      explanation:
+        'In Canada, professional practices (lawyers, consultants, real estate brokers) hold client retainer deposits in a Trust Account (1020). These funds do NOT belong to the business until billed, so they sit in Trust Assets with an offsetting Trust Liability (2050) without inflating operating revenue.',
+      sampleData: {
+        id: 'acc-1020',
+        clientBusinessId: activeClient.id,
+        code: '1020',
+        name: 'Client Retainer Trust Account (Fiduciary CAD)',
+        type: 'asset',
+        classification: 'trust_escrow',
+        offsettingLiabilityAccount: '2050 (Trust Liability Retainers)',
+        currentBalance: 12500.0,
+      },
+    },
+    ledger: {
+      title: 'Double-Entry Journal Entries & Ledger Lines',
+      cardinality: '1 Client Business : N Journal Entries | 1 Entry : N Ledger Lines (Debits & Credits)',
+      sqlTable: 'journal_entries & ledger_lines',
+      foreignKey: 'journal_entry_id -> journal_entries.id | account_id -> chart_of_accounts.id',
+      role: 'Immutable balanced accounting records enforcing mathematical equality (SUM(Debits) === SUM(Credits)).',
+      explanation:
+        'Every financial event creates a Journal Entry header with 2 or more Ledger Lines. Canadian GST (Line 108 ITC) and QST (Line 208 ITR) are automatically broken out onto distinct tax ledger lines.',
+      sampleData: {
+        entryId: 'entry-1045',
+        memo: 'Bell Canada Commercial Telecom',
+        totalDebits: 172.46,
+        totalCredits: 172.46,
+        lines: [
+          { code: '6400', name: 'Telecom Expense', debit: 150.0, credit: 0.0 },
+          { code: '2150', name: 'GST Paid on Purchases (5%)', debit: 7.5, credit: 0.0 },
+          { code: '2160', name: 'QST Paid on Purchases (9.975%)', debit: 14.96, credit: 0.0 },
+          { code: '1010', name: 'Operating Chequing Outflow', debit: 0.0, credit: 172.46 },
+        ],
+      },
+    },
+    banking: {
+      title: 'Bank Feeds & Reconciliation Engine',
+      cardinality: '1 Bank Account : N Statement Transactions | 1 Tx : 1 Matched Entry',
+      sqlTable: 'bank_transactions',
+      foreignKey: 'bank_account_id -> chart_of_accounts.id',
+      role: 'Automated 2-way matching between raw bank statement feeds and recorded general ledger lines.',
+      explanation:
+        'Transactions downloaded from Canadian institutions (RBC, TD, Desjardins) are ingested and matched against ledger entries to ensure statement balances match general ledger balances to the exact penny.',
+      sampleData: {
+        id: 'bank-tx-881',
+        bankAccountId: 'acc-1010',
+        date: '2026-08-12',
+        description: 'PRE-AUTH DEBIT HYDRO QUEBEC',
+        amount: -432.18,
+        status: 'matched',
+        matchedEntryId: 'entry-1022',
+      },
+    },
+    tax: {
+      title: 'CRA & Revenu Québec Tax Filing Reports',
+      cardinality: '1 Client Business : N Filing Periods (e.g. 2026-Q2)',
+      sqlTable: 'Derived from ledger_lines + chart_of_accounts (2150, 2160, 2170)',
+      foreignKey: 'client_business_id -> client_businesses.id',
+      role: 'Automated Line 105 vs 108 (GST/HST) and Line 205 vs 208 (QST) government remittance worksheets.',
+      explanation:
+        'Tax returns are computed live from the ledger. When sales occur, GST/QST collected is credited to liability accounts. When expenses occur, ITCs and ITRs are debited to reduce the net payable to CRA and Revenu Québec.',
+      sampleData: {
+        period: '2026-Q2',
+        jurisdiction: 'Quebec (GST 5% + QST 9.975%)',
+        line105GstCollected: 600.0,
+        line108ItcsClaimed: 191.25,
+        netGstPayable: 408.75,
+        line205QstCollected: 1197.0,
+        line208ItrsClaimed: 381.55,
+        netQstPayable: 815.45,
+        totalRemittanceDueCAD: 1224.2,
+      },
+    },
   };
 
   const endpoints = [
@@ -102,6 +281,7 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
       },
       mockResponse: [
         { id: 'acc-1010', code: '1010', name: 'Operating Chequing Account (CAD)', type: 'asset', currentBalance: 42150.2 },
+        { id: 'acc-1020', code: '1020', name: 'Client Retainer Trust Account (CAD)', type: 'asset', currentBalance: 12500.0 },
         { id: 'acc-2150', code: '2150', name: 'GST/HST Paid on Purchases (ITC)', type: 'liability', currentBalance: 320.45 },
         { id: 'acc-2160', code: '2160', name: 'QST Paid on Purchases (ITR)', type: 'liability', currentBalance: 639.3 },
         { id: 'acc-4010', code: '4010', name: 'Consulting & Professional Fees Revenue', type: 'revenue', currentBalance: 24500.0 },
@@ -189,14 +369,14 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
         <div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              <Server className="w-5 h-5 sm:w-6 sm:h-6" />
+              <GitBranch className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center space-x-2">
-                <span>Backend, Database & API Architecture Hub</span>
+                <span>Domain Model, Entity Hierarchy & Architecture</span>
               </h1>
               <p className="text-xs text-slate-400 mt-1">
-                Full-stack reference for database table design, Express REST routes, and connecting React to PostgreSQL.
+                Visual relationship flow: Practice (Firm) → Staff Users → Client Businesses → Chart of Accounts (Operating & Trust) → Double-Entry Ledgers.
               </p>
             </div>
           </div>
@@ -204,17 +384,29 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
 
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => handleCopy(COMPLETE_ARCHITECTURE_MARKDOWN, 'full-md')}
+            onClick={() => handleCopy(MERMAID_DIAGRAM_SPEC, 'mermaid-spec')}
             className="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-xl text-xs font-semibold border border-slate-700 transition-colors"
           >
-            {copiedSection === 'full-md' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Download className="w-3.5 h-3.5" />}
-            <span>{copiedSection === 'full-md' ? 'Copied Full Guide!' : 'Copy Markdown Spec'}</span>
+            {copiedSection === 'mermaid-spec' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            <span>{copiedSection === 'mermaid-spec' ? 'Copied Diagram Spec!' : 'Copy Diagram Flow'}</span>
           </button>
         </div>
       </div>
 
       {/* Sub-tab Navigation */}
       <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/90 shadow-xs p-1.5 flex flex-wrap gap-1">
+        <button
+          onClick={() => setActiveSubTab('visual_flow')}
+          className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+            activeSubTab === 'visual_flow'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <GitBranch className="w-3.5 h-3.5" />
+          <span>1. Visual Flow Diagram (Firm → User → Business → Account)</span>
+        </button>
+
         <button
           onClick={() => setActiveSubTab('guide')}
           className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
@@ -224,7 +416,7 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
           }`}
         >
           <BookOpen className="w-3.5 h-3.5" />
-          <span>1. Step-by-Step Implementation Guide</span>
+          <span>2. Step-by-Step Implementation Guide</span>
         </button>
 
         <button
@@ -236,7 +428,7 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
           }`}
         >
           <Database className="w-3.5 h-3.5" />
-          <span>2. Database & SQL DDL Schema</span>
+          <span>3. Database & SQL DDL Schema</span>
         </button>
 
         <button
@@ -248,7 +440,7 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
           }`}
         >
           <Globe className="w-3.5 h-3.5" />
-          <span>3. REST API Routes (`server.ts`)</span>
+          <span>4. REST API Routes (`server.ts`)</span>
         </button>
 
         <button
@@ -260,7 +452,7 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
           }`}
         >
           <FileCode className="w-3.5 h-3.5" />
-          <span>4. React API Client & Hooks</span>
+          <span>5. React API Client & Hooks</span>
         </button>
 
         <button
@@ -272,23 +464,341 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
           }`}
         >
           <Play className="w-3.5 h-3.5" />
-          <span>5. Live REST API Tester</span>
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('roadmap')}
-          className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
-            activeSubTab === 'roadmap'
-              ? 'bg-emerald-600 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-          }`}
-        >
-          <Calendar className="w-3.5 h-3.5" />
-          <span>6. Sprint Checklist</span>
+          <span>6. Live REST API Tester</span>
         </button>
       </div>
 
-      {/* SUBTAB 1: STEP-BY-STEP IMPLEMENTATION GUIDE */}
+      {/* SUBTAB 1: VISUAL FLOW DIAGRAM & ENTITY INSPECTOR */}
+      {activeSubTab === 'visual_flow' && (
+        <div className="space-y-6">
+          {/* Quick Verbal Summary Card */}
+          <div className="bg-slate-900 text-white rounded-xl sm:rounded-2xl p-5 sm:p-6 border border-slate-800 space-y-3">
+            <div className="flex items-center space-x-2 text-emerald-400 font-bold text-xs uppercase tracking-wider">
+              <Sparkles className="w-4 h-4" />
+              <span>Core Hierarchy Summary (How the pieces connect)</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+              <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 space-y-1">
+                <div className="font-bold text-emerald-400 flex items-center space-x-1.5">
+                  <Building2 className="w-4 h-4" />
+                  <span>1. Practice (Firm)</span>
+                </div>
+                <p className="text-slate-300 text-[11px]">
+                  The top tenant boundary (your firm). Holds subscription limits, global settings, and practice users.
+                </p>
+              </div>
+
+              <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 space-y-1">
+                <div className="font-bold text-blue-400 flex items-center space-x-1.5">
+                  <Users className="w-4 h-4" />
+                  <span>2. Users (Staff / CPAs)</span>
+                </div>
+                <p className="text-slate-300 text-[11px]">
+                  Accountants working within the practice who are assigned to manage one or more client businesses.
+                </p>
+              </div>
+
+              <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 space-y-1">
+                <div className="font-bold text-purple-400 flex items-center space-x-1.5">
+                  <Briefcase className="w-4 h-4" />
+                  <span>3. Client Businesses</span>
+                </div>
+                <p className="text-slate-300 text-[11px]">
+                  Corporate legal entities (e.g. Apex Creative Studio Inc.) with CRA Business Numbers & provincial rules.
+                </p>
+              </div>
+
+              <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 space-y-1">
+                <div className="font-bold text-amber-400 flex items-center space-x-1.5">
+                  <Wallet className="w-4 h-4" />
+                  <span>4. Accounts (Operating & Trust)</span>
+                </div>
+                <p className="text-slate-300 text-[11px]">
+                  Standard Canadian GL accounts (Operating Bank <code className="text-white">1010</code>, Trust Escrow <code className="text-white">1020</code>, Tax <code className="text-white">2150/2160</code>).
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Visual Hierarchy Flow Canvas */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left: Visual Flow Nodes */}
+            <div className="lg:col-span-7 space-y-4">
+              <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/90 shadow-xs p-5 sm:p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                    <Layers className="w-4 h-4 text-emerald-600" />
+                    <span>Interactive Domain Flow Diagram</span>
+                  </h2>
+                  <span className="text-[11px] text-slate-500 font-medium">Click any node to inspect its database contract</span>
+                </div>
+
+                {/* Flow Diagram Cards Stack */}
+                <div className="space-y-3">
+                  {/* LEVEL 1: FIRM */}
+                  <div
+                    onClick={() => setSelectedEntity('firm')}
+                    className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                      selectedEntity === 'firm'
+                        ? 'border-emerald-500 bg-emerald-50/40 shadow-sm'
+                        : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-9 h-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold shadow-xs">
+                          <Building2 className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <span className="font-bold text-xs text-slate-900">Level 1: Accounting Practice (Firm)</span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded">Tenant Root</span>
+                          </div>
+                          <p className="text-[11px] text-slate-600">{firm.name} (Tier: 15-Client Flagship)</p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-slate-500">1</span>
+                    </div>
+                  </div>
+
+                  {/* Connector Arrow */}
+                  <div className="flex justify-center text-slate-400">
+                    <ArrowDown className="w-4 h-4 stroke-[2.5]" />
+                  </div>
+
+                  {/* LEVEL 2: USERS & CLIENT BUSINESSES (SPLIT LEVEL) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div
+                      onClick={() => setSelectedEntity('user')}
+                      className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer ${
+                        selectedEntity === 'user'
+                          ? 'border-blue-500 bg-blue-50/40 shadow-sm'
+                          : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2.5 mb-1.5">
+                        <div className="w-7 h-7 rounded-md bg-blue-600 text-white flex items-center justify-center">
+                          <Users className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-xs text-slate-900">Level 2A: Staff Users</div>
+                          <span className="text-[10px] text-blue-700 font-mono font-bold">1 Firm → N Users</span>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-slate-600">
+                        CPAs, Bookkeepers & Auditors assigned to client portfolios.
+                      </p>
+                    </div>
+
+                    <div
+                      onClick={() => setSelectedEntity('client')}
+                      className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer ${
+                        selectedEntity === 'client'
+                          ? 'border-purple-500 bg-purple-50/40 shadow-sm'
+                          : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2.5 mb-1.5">
+                        <div className="w-7 h-7 rounded-md bg-purple-600 text-white flex items-center justify-center">
+                          <Briefcase className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-xs text-slate-900">Level 2B: Client Businesses</div>
+                          <span className="text-[10px] text-purple-700 font-mono font-bold">1 Firm → Up to 15 Clients</span>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-slate-600">
+                        {activeClient.legalName} ({activeClient.provinceCode})
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Connector Arrow */}
+                  <div className="flex justify-center text-slate-400">
+                    <ArrowDown className="w-4 h-4 stroke-[2.5]" />
+                  </div>
+
+                  {/* LEVEL 3: CHART OF ACCOUNTS (OPERATING VS TRUST) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div
+                      onClick={() => setSelectedEntity('account')}
+                      className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer ${
+                        selectedEntity === 'account'
+                          ? 'border-emerald-500 bg-emerald-50/40 shadow-sm'
+                          : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2.5 mb-1.5">
+                        <div className="w-7 h-7 rounded-md bg-emerald-600 text-white flex items-center justify-center">
+                          <Wallet className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-xs text-slate-900">Operating Accounts (1010)</div>
+                          <span className="text-[10px] text-emerald-700 font-mono font-bold">General Business Cash</span>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-slate-600">
+                        Standard chequing, AR, AP, Revenue, Expenses & Sales Tax accounts.
+                      </p>
+                    </div>
+
+                    <div
+                      onClick={() => setSelectedEntity('trust_account')}
+                      className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer ${
+                        selectedEntity === 'trust_account'
+                          ? 'border-amber-500 bg-amber-50/40 shadow-sm'
+                          : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2.5 mb-1.5">
+                        <div className="w-7 h-7 rounded-md bg-amber-600 text-white flex items-center justify-center">
+                          <Lock className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-xs text-slate-900">Trust Accounts (1020)</div>
+                          <span className="text-[10px] text-amber-700 font-mono font-bold">Client Retainer / Escrow</span>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-slate-600">
+                        Fiduciary accounts held on trust for clients (strictly segregated).
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Connector Arrow */}
+                  <div className="flex justify-center text-slate-400">
+                    <ArrowDown className="w-4 h-4 stroke-[2.5]" />
+                  </div>
+
+                  {/* LEVEL 4: DOUBLE-ENTRY LEDGERS, BANKING & TAX */}
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    <div
+                      onClick={() => setSelectedEntity('ledger')}
+                      className={`p-3 rounded-xl border-2 transition-all cursor-pointer text-center ${
+                        selectedEntity === 'ledger'
+                          ? 'border-blue-500 bg-blue-50/40 shadow-sm'
+                          : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
+                      }`}
+                    >
+                      <FileSpreadsheet className="w-5 h-5 mx-auto text-blue-600 mb-1" />
+                      <div className="font-bold text-xs text-slate-900">Journal Entries</div>
+                      <span className="text-[9px] text-blue-700 font-mono">Debits === Credits</span>
+                    </div>
+
+                    <div
+                      onClick={() => setSelectedEntity('banking')}
+                      className={`p-3 rounded-xl border-2 transition-all cursor-pointer text-center ${
+                        selectedEntity === 'banking'
+                          ? 'border-emerald-500 bg-emerald-50/40 shadow-sm'
+                          : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
+                      }`}
+                    >
+                      <RefreshCw className="w-5 h-5 mx-auto text-emerald-600 mb-1" />
+                      <div className="font-bold text-xs text-slate-900">Bank Feeds</div>
+                      <span className="text-[9px] text-emerald-700 font-mono">Reconciliation</span>
+                    </div>
+
+                    <div
+                      onClick={() => setSelectedEntity('tax')}
+                      className={`p-3 rounded-xl border-2 transition-all cursor-pointer text-center ${
+                        selectedEntity === 'tax'
+                          ? 'border-purple-500 bg-purple-50/40 shadow-sm'
+                          : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
+                      }`}
+                    >
+                      <FileCheck2Icon className="w-5 h-5 mx-auto text-purple-600 mb-1" />
+                      <div className="font-bold text-xs text-slate-900">CRA / RQ Tax</div>
+                      <span className="text-[9px] text-purple-700 font-mono">GST / QST / HST</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Selected Node Contract Inspector */}
+            <div className="lg:col-span-5 space-y-4">
+              <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/90 shadow-xs p-5 sm:p-6 space-y-4 sticky top-20">
+                <div className="border-b border-slate-100 pb-3">
+                  <div className="flex items-center space-x-2 text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">
+                    <HelpCircle className="w-4 h-4" />
+                    <span>Selected Entity Contract</span>
+                  </div>
+                  <h3 className="font-bold text-base text-slate-900">
+                    {entityDetails[selectedEntity].title}
+                  </h3>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200/90 space-y-1">
+                    <div className="text-slate-500 font-semibold text-[11px]">Cardinality & Multiplicity</div>
+                    <div className="font-mono font-bold text-slate-900">{entityDetails[selectedEntity].cardinality}</div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/90">
+                      <div className="text-slate-500 font-semibold text-[10px]">SQL Table</div>
+                      <div className="font-mono font-bold text-slate-900">{entityDetails[selectedEntity].sqlTable}</div>
+                    </div>
+                    <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/90">
+                      <div className="text-slate-500 font-semibold text-[10px]">Foreign Key Link</div>
+                      <div className="font-mono font-bold text-slate-900 truncate">{entityDetails[selectedEntity].foreignKey}</div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-slate-500 font-semibold text-[11px] mb-1">Business Purpose</div>
+                    <p className="text-slate-700 leading-relaxed">{entityDetails[selectedEntity].explanation}</p>
+                  </div>
+
+                  <div>
+                    <div className="text-slate-500 font-semibold text-[11px] mb-1">Live Sample Database Record</div>
+                    <pre className="bg-slate-900 text-emerald-400 p-3 rounded-lg font-mono text-[11px] overflow-x-auto border border-slate-800">
+                      {JSON.stringify(entityDetails[selectedEntity].sampleData, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Trust Account vs. Operating Account Visual Guide Card */}
+          <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/90 shadow-xs p-5 sm:p-6 space-y-4">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center space-x-2">
+              <ShieldCheck className="w-5 h-5 text-emerald-600" />
+              <span>Specialized Canadian Domain Guide: Operating Accounts vs. Trust / Escrow Accounts</span>
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-4 space-y-2">
+                <div className="font-bold text-emerald-900 flex items-center space-x-2">
+                  <Wallet className="w-4 h-4 text-emerald-700" />
+                  <span>General Operating Account (Account Code: 1010)</span>
+                </div>
+                <p className="text-slate-700 leading-relaxed">
+                  Owned fully by the client business. Used to receive customer invoice payments, disburse vendor cheques, pay employee wages, and remit Canadian GST/QST.
+                </p>
+                <div className="font-mono text-[11px] bg-white p-2.5 rounded border border-emerald-200 text-slate-800">
+                  Debit Bank (1010) | Credit Consulting Revenue (4010)
+                </div>
+              </div>
+
+              <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-4 space-y-2">
+                <div className="font-bold text-amber-900 flex items-center space-x-2">
+                  <Lock className="w-4 h-4 text-amber-700" />
+                  <span>Client Retainer Trust Account (Account Code: 1020)</span>
+                </div>
+                <p className="text-slate-700 leading-relaxed">
+                  Fiduciary funds held on behalf of third parties (e.g. upfront legal/consulting retainers, real estate security deposits). Cannot be spent on general expenses until an invoice is rendered.
+                </p>
+                <div className="font-mono text-[11px] bg-white p-2.5 rounded border border-amber-200 text-slate-800">
+                  Debit Trust Bank (1020) | Credit Trust Liability (2050)
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SUBTAB 2: STEP-BY-STEP IMPLEMENTATION GUIDE */}
       {activeSubTab === 'guide' && (
         <div className="space-y-6">
           {/* Visual Architecture Flow */}
@@ -357,12 +867,12 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
                 </div>
               </div>
               <p className="text-xs text-slate-600">
-                Execute the SQL script in <strong>Tab 2 (Database & SQL DDL Schema)</strong>. This provisions:
+                Execute the SQL script in <strong>Tab 3 (Database & SQL DDL Schema)</strong>. This provisions:
               </p>
               <ul className="text-xs text-slate-700 space-y-1.5 list-disc pl-4 font-medium">
                 <li><code className="text-slate-900 font-mono">firms</code>: Accounting practices.</li>
                 <li><code className="text-slate-900 font-mono">client_businesses</code>: Client entities under the 15-business boundary.</li>
-                <li><code className="text-slate-900 font-mono">chart_of_accounts</code>: 4-digit Canadian standardized accounts.</li>
+                <li><code className="text-slate-900 font-mono">chart_of_accounts</code>: 4-digit Canadian standardized accounts (including Operating & Trust).</li>
                 <li><code className="text-slate-900 font-mono">journal_entries</code> & <code className="text-slate-900 font-mono">ledger_lines</code>: Double-entry lines.</li>
                 <li><code className="text-slate-900 font-mono">bank_transactions</code> & <code className="text-slate-900 font-mono">receipts</code>.</li>
               </ul>
@@ -380,7 +890,7 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
                 </div>
               </div>
               <p className="text-xs text-slate-600">
-                Setup the server endpoints using the template in <strong>Tab 3 (REST API Routes)</strong>:
+                Setup the server endpoints using the template in <strong>Tab 4 (REST API Routes)</strong>:
               </p>
               <ul className="text-xs text-slate-700 space-y-1.5 list-disc pl-4 font-medium">
                 <li>Binds to <code className="text-slate-900 font-mono">0.0.0.0:3000</code>.</li>
@@ -422,7 +932,7 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
                 </div>
               </div>
               <p className="text-xs text-slate-600">
-                In <code className="text-slate-900 font-mono">/src/context/AccountingContext.tsx</code>, replace in-memory arrays with API fetchers (provided in <strong>Tab 4</strong>):
+                In <code className="text-slate-900 font-mono">/src/context/AccountingContext.tsx</code>, replace in-memory arrays with API fetchers (provided in <strong>Tab 5</strong>):
               </p>
               <ul className="text-xs text-slate-700 space-y-1.5 list-disc pl-4 font-medium">
                 <li>Load initial data via <code className="text-slate-900 font-mono">api.getClients()</code> and <code className="text-slate-900 font-mono">api.getAccounts()</code>.</li>
@@ -434,7 +944,7 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
         </div>
       )}
 
-      {/* SUBTAB 2: DATABASE & SQL DDL SCHEMA */}
+      {/* SUBTAB 3: DATABASE & SQL DDL SCHEMA */}
       {activeSubTab === 'database_ddl' && (
         <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/90 shadow-xs p-5 sm:p-7 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4">
@@ -463,7 +973,7 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
         </div>
       )}
 
-      {/* SUBTAB 3: REST API ROUTES (`server.ts`) */}
+      {/* SUBTAB 4: REST API ROUTES (`server.ts`) */}
       {activeSubTab === 'api_specs' && (
         <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/90 shadow-xs p-5 sm:p-7 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4">
@@ -492,7 +1002,7 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
         </div>
       )}
 
-      {/* SUBTAB 4: FRONTEND CLIENT & HOOKS */}
+      {/* SUBTAB 5: FRONTEND CLIENT & HOOKS */}
       {activeSubTab === 'frontend_client' && (
         <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/90 shadow-xs p-5 sm:p-7 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4">
@@ -521,7 +1031,7 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
         </div>
       )}
 
-      {/* SUBTAB 5: LIVE REST API TESTER */}
+      {/* SUBTAB 6: LIVE REST API TESTER */}
       {activeSubTab === 'api_tester' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Endpoint List */}
@@ -626,88 +1136,49 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
           </div>
         </div>
       )}
-
-      {/* SUBTAB 6: ROADMAP & SPRINT CHECKLIST */}
-      {activeSubTab === 'roadmap' && (
-        <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/90 shadow-xs p-5 sm:p-7 space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-100 pb-4">
-            <div>
-              <h2 className="text-base font-bold text-slate-900 flex items-center space-x-2">
-                <Calendar className="w-5 h-5 text-emerald-600" />
-                <span>Backend & Database Implementation Checklist</span>
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Track and verify each stage of the database, API, and frontend wiring.
-              </p>
-            </div>
-
-            <div className="bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-xl text-xs font-bold text-emerald-900 font-mono">
-              Status: Ready for Cloud SQL / PostgreSQL Execution
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/90 space-y-3">
-              <span className="text-xs font-bold text-slate-900 uppercase tracking-wide">Phase 1: Database & Schemas</span>
-              <div className="space-y-2 text-xs">
-                <label className="flex items-start space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={!!completedTasks['db-1']}
-                    onChange={() => toggleTask('db-1')}
-                    className="rounded text-emerald-600 mt-0.5"
-                  />
-                  <span className={completedTasks['db-1'] ? 'line-through text-slate-400' : 'text-slate-700 font-medium'}>
-                    Execute SQL DDL script creating all 8 core tables with foreign keys and UUID keys
-                  </span>
-                </label>
-                <label className="flex items-start space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={!!completedTasks['db-2']}
-                    onChange={() => toggleTask('db-2')}
-                    className="rounded text-emerald-600 mt-0.5"
-                  />
-                  <span className={completedTasks['db-2'] ? 'line-through text-slate-400' : 'text-slate-700 font-medium'}>
-                    Seed database with standard Canadian 4-digit Chart of Accounts (1010, 2150, 2160, 4010, 5010)
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/90 space-y-3">
-              <span className="text-xs font-bold text-slate-900 uppercase tracking-wide">Phase 2: Express Server & APIs</span>
-              <div className="space-y-2 text-xs">
-                <label className="flex items-start space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={!!completedTasks['api-1']}
-                    onChange={() => toggleTask('api-1')}
-                    className="rounded text-emerald-600 mt-0.5"
-                  />
-                  <span className={completedTasks['api-1'] ? 'line-through text-slate-400' : 'text-slate-700 font-medium'}>
-                    Create `/api/v1/clients/:clientId/journal-entries` with atomic Debits === Credits validation
-                  </span>
-                </label>
-                <label className="flex items-start space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={!!completedTasks['api-2']}
-                    onChange={() => toggleTask('api-2')}
-                    className="rounded text-emerald-600 mt-0.5"
-                  />
-                  <span className={completedTasks['api-2'] ? 'line-through text-slate-400' : 'text-slate-700 font-medium'}>
-                    Add Canadian Sales Tax aggregation endpoint (`/reports/sales-tax-summary`) for CRA GST & RQ QST
-                  </span>
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
+
+// Helper custom icon wrapper
+function FileCheck2Icon(props: { className?: string }) {
+  return <FileText className={props.className} />;
+}
+
+const MERMAID_DIAGRAM_SPEC = `%% Studio Books Entity & Domain Relationship Diagram
+graph TD
+    %% Level 1: Practice
+    Firm["Accounting Practice (Firm / Tenant Root)\\nTable: firms"]
+    
+    %% Level 2: Users and Businesses
+    User["Staff Users (CPAs & Bookkeepers)\\nTable: users"]
+    Client["Client Businesses (Max 15)\\nTable: client_businesses"]
+    
+    %% Level 3: Accounts
+    OperatingAcc["Operating Bank Account (1010)\\nTable: chart_of_accounts"]
+    TrustAcc["Trust / Retainer Escrow Account (1020)\\nTable: chart_of_accounts"]
+    TaxAcc["Sales Tax Accounts (2150 GST / 2160 QST)\\nTable: chart_of_accounts"]
+    RevenueExpense["Revenue (4xxx) & Expenses (5xxx+)\\nTable: chart_of_accounts"]
+    
+    %% Level 4: Ledgers and Feeds
+    Journal["Double-Entry Journal Entries\\nTable: journal_entries"]
+    LedgerLines["Ledger Lines (Debits === Credits)\\nTable: ledger_lines"]
+    BankFeeds["Bank Feeds & Reconciliation\\nTable: bank_transactions"]
+    TaxFiling["CRA & RQ Tax Filings\\nLine 105/108 & Line 205/208"]
+
+    %% Linkages
+    Firm -->|1 : N| User
+    Firm -->|1 : N (Max 15)| Client
+    User -.->|Manages / Assigned| Client
+    Client -->|1 : N| OperatingAcc
+    Client -->|1 : N| TrustAcc
+    Client -->|1 : N| TaxAcc
+    Client -->|1 : N| RevenueExpense
+    Client -->|1 : N| Journal
+    Journal -->|1 : N| LedgerLines
+    OperatingAcc -->|Reconciles with| BankFeeds
+    LedgerLines -->|Generates| TaxFiling
+`;
 
 const POSTGRES_COMPLETE_DDL = `-- ====================================================================
 -- STUDIO BOOKS: CANADIAN MULTI-TENANT POSTGRESQL 16 DDL SCHEMA
@@ -756,9 +1227,10 @@ CREATE TABLE client_businesses (
 CREATE TABLE chart_of_accounts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     client_business_id UUID NOT NULL REFERENCES client_businesses(id) ON DELETE CASCADE,
-    code VARCHAR(10) NOT NULL, -- e.g. '1010', '2150', '2160', '4010', '5010'
+    code VARCHAR(10) NOT NULL, -- e.g. '1010', '1020', '2150', '2160', '4010', '5010'
     name VARCHAR(255) NOT NULL,
     type VARCHAR(50) NOT NULL, -- 'asset' | 'liability' | 'equity' | 'revenue' | 'expense'
+    classification VARCHAR(50) NOT NULL, -- 'bank' | 'trust_escrow' | 'accounts_receivable' | 'sales_tax_payable' | 'operating_revenue' | 'operating_expense'
     category VARCHAR(100),
     is_tax_account BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
@@ -1030,31 +1502,3 @@ export class ApiClient {
 }
 
 export const api = new ApiClient('firm-flagship-1', 'client-apex-1', 'user-senior-cpa-1');`;
-
-const COMPLETE_ARCHITECTURE_MARKDOWN = `# Studio Books: Backend, Database & REST API Architecture Specification
-
-## 1. Executive Summary & Topology
-Studio Books is a Canadian multi-tenant bookkeeping practice management platform designed for the 15-business boundary.
-
-- **Frontend**: React 18 + Vite + Tailwind CSS.
-- **Backend Service**: Node.js + Express (running on port 3000).
-- **Database Engine**: PostgreSQL 16 (or Google Cloud SQL) with Row-Level Security (RLS) and foreign key constraints.
-- **Multi-Tenant Routing (No Initial Auth)**: Tenant identification via HTTP headers (\`x-firm-id\`, \`x-client-id\`, \`x-user-id\`).
-
-## 2. Core PostgreSQL Relational Tables
-1. \`firms\` (Tenant Root)
-2. \`users\` (Bookkeepers, CPAs, Firm Owners)
-3. \`client_businesses\` (Client entities, e.g., Apex Creative Studio Inc.)
-4. \`chart_of_accounts\` (Standardized Canadian 4-digit GL accounts)
-5. \`journal_entries\` (Balanced transaction headers)
-6. \`ledger_lines\` (Double-entry debits and credits)
-7. \`bank_transactions\` (Reconciliation feed)
-8. \`receipts\` (OCR extraction documents)
-
-## 3. Double-Entry Integrity Guarantee
-Every journal entry requires \`SUM(debit) == SUM(credit)\`. The backend enforces this before executing database transactions.
-
-## 4. Canadian Sales Tax Integration (CRA & Revenu Québec)
-- GST: Line 105 (Collected) vs Line 108 (ITCs Claimed)
-- QST: Line 205 (Collected) vs Line 208 (ITRs Claimed)
-`;
