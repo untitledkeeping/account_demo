@@ -71,8 +71,8 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
     'db-1': true,
     'db-2': true,
     'api-1': true,
-    'fe-1': false,
-    'fe-2': false,
+    'fe-1': true,
+    'fe-2': true,
   });
 
   const toggleTask = (id: string) => {
