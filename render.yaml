@@ -1,0 +1,17 @@
+# render.yaml - Render Blueprint Configuration
+services:
+  - type: web
+    name: studio-books-canadian-accounting
+    env: node
+    plan: free
+    buildCommand: npm install && npx prisma db push && npm run db:seed && npm run build
+    startCommand: npm run server
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        value: file:./dev.db
+      - key: GEMINI_API_KEY
+        sync: false
