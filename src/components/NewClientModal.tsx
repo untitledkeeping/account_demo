@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Building,
-  Check,
-  X,
-  ShieldCheck,
-  AlertCircle,
-  Calendar,
-  Sparkles,
-  User as UserIcon,
-} from 'lucide-react';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from './ui/dialog';
+import { Input } from './ui/input';
+import { NativeSelect } from './ui/select';
+import { Button } from './ui/button';
+import { Building, Check, AlertCircle } from 'lucide-react';
 import { ClientBusiness, ProvinceCode, Firm, BookkeepingStatus, User } from '../types';
 
 interface NewClientModalProps {
@@ -45,8 +47,6 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
     }
   }, [currentUser]);
 
-  if (!isOpen) return null;
-
   const isLimitReached = currentClientCount >= firm.activeClientLimit;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -75,20 +75,15 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">Provision Client Business</h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Adds an isolated multi-tenant client file to {firm.name}.
-            </p>
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        <DialogHeader>
+          <DialogTitle>Provision Client Business</DialogTitle>
+          <DialogDescription>
+            Adds an isolated multi-tenant client file to {firm.name}.
+          </DialogDescription>
+        </DialogHeader>
 
         {/* Firm Boundary Status */}
         <div
@@ -119,53 +114,51 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
           <form onSubmit={handleSubmit} className="space-y-4 text-xs">
             <div>
               <label className="font-bold text-slate-700 block mb-1">Legal Corporation Name *</label>
-              <input
+              <Input
                 type="text"
                 required
                 placeholder="e.g. Atelier Veloce Inc."
                 value={legalName}
                 onChange={(e) => setLegalName(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="font-bold text-slate-700 block mb-1">CRA Business No. (BN9)</label>
-                <input
+                <Input
                   type="text"
                   placeholder="e.g. 783451290 RC0001"
                   value={businessNumber}
                   onChange={(e) => setBusinessNumber(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-emerald-500"
+                  className="font-mono"
                 />
               </div>
 
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Canadian Jurisdiction</label>
-                <select
+                <NativeSelect
                   value={provinceCode}
                   onChange={(e) => setProvinceCode(e.target.value as ProvinceCode)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500"
                 >
                   <option value="QC">Québec (GST + QST 14.975%)</option>
                   <option value="ON">Ontario (HST 13%)</option>
                   <option value="BC">British Columbia (GST + PST)</option>
                   <option value="AB">Alberta (GST 5%)</option>
                   <option value="NS">Nova Scotia (HST 15%)</option>
-                </select>
+                </NativeSelect>
               </div>
             </div>
 
             {provinceCode === 'QC' && (
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Revenu Québec QST Number</label>
-                <input
+                <Input
                   type="text"
                   placeholder="e.g. 1098765432 TQ0001"
                   value={qstNumber}
                   onChange={(e) => setQstNumber(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-emerald-500"
+                  className="font-mono"
                 />
               </div>
             )}
@@ -173,10 +166,9 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Assigned Lead Bookkeeper</label>
-                <select
+                <NativeSelect
                   value={assignedBookkeeper}
                   onChange={(e) => setAssignedBookkeeper(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500"
                 >
                   {allUsers.map((u) => (
                     <option key={u.id} value={u.fullName}>
@@ -186,45 +178,48 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
                   {!allUsers.some((u) => u.fullName === assignedBookkeeper) && (
                     <option value={assignedBookkeeper}>{assignedBookkeeper}</option>
                   )}
-                </select>
+                </NativeSelect>
               </div>
 
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Fiscal Year-End Month</label>
-                <select
-                  value={fiscalYearEndMonth}
+                <NativeSelect
+                  value={fiscalYearEndMonth.toString()}
                   onChange={(e) => setFiscalYearEndMonth(parseInt(e.target.value))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
                 >
-                  <option value={12}>December 31</option>
-                  <option value={3}>March 31</option>
-                  <option value={6}>June 30</option>
-                  <option value={9}>September 30</option>
-                  <option value={10}>October 31</option>
-                </select>
+                  <option value="12">December 31</option>
+                  <option value="3">March 31</option>
+                  <option value="6">June 30</option>
+                  <option value="9">September 30</option>
+                  <option value="10">October 31</option>
+                </NativeSelect>
               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-100">
-              <button
+            <DialogFooter>
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={onClose}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
-                className="flex items-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white font-bold px-5 py-2.5 rounded-xl text-xs transition-all shadow-sm"
+                variant="primary"
+                size="default"
+                className="flex items-center gap-1.5"
               >
                 <Check className="w-4 h-4 text-emerald-400 stroke-[3]" />
                 <span>Provision Client File</span>
-              </button>
-            </div>
+              </Button>
+            </DialogFooter>
           </form>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
+

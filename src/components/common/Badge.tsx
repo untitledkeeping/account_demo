@@ -1,6 +1,6 @@
 // src/components/common/Badge.tsx
 import React from 'react';
-import { tokens } from '../../styles/tokens';
+import { Badge as ShadcnBadge } from '../ui/badge';
 
 export interface BadgeProps {
   variant?: 'success' | 'error' | 'warning' | 'info' | 'indigo';
@@ -10,6 +10,14 @@ export interface BadgeProps {
   size?: 'sm' | 'md';
 }
 
+const variantMap: Record<string, 'default' | 'destructive' | 'warning' | 'info' | 'brand'> = {
+  success: 'default',
+  error: 'destructive',
+  warning: 'warning',
+  info: 'info',
+  indigo: 'brand',
+};
+
 export const Badge: React.FC<BadgeProps> = ({
   variant = 'info',
   children,
@@ -17,15 +25,15 @@ export const Badge: React.FC<BadgeProps> = ({
   className = '',
   size = 'md',
 }) => {
-  const colorClass = tokens.colors[variant].badge;
-  const sizeClass = size === 'sm' ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-0.5 text-xs';
-
   return (
-    <span
-      className={`inline-flex items-center space-x-1 font-bold rounded-full border ${colorClass} ${sizeClass} ${className}`}
+    <ShadcnBadge
+      variant={variantMap[variant] || 'info'}
+      size={size === 'sm' ? 'sm' : 'default'}
+      icon={icon}
+      className={className}
     >
-      {icon && <span className="shrink-0">{icon}</span>}
-      <span>{children}</span>
-    </span>
+      {children}
+    </ShadcnBadge>
   );
 };
+
