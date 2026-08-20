@@ -1,5 +1,6 @@
 // src/components/Navbar.tsx
 import React, { useState } from 'react';
+import { Button, IconButton } from '@moondesignsystem/react';
 import {
   ChevronRight,
   Briefcase,
@@ -7,10 +8,10 @@ import {
   Plus,
   Search,
   Check,
-  Building2,
   Menu,
   Bell,
 } from 'lucide-react';
+
 import { Firm, ClientBusiness, ActiveTab, User } from '../types';
 
 interface NavbarProps {
@@ -59,13 +60,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Left: Breadcrumbs & Client Switcher */}
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
             {onToggleSidebar && (
-              <button
+              <IconButton
+                variant="ghost"
+                context="neutral"
+                size="sm"
                 onClick={onToggleSidebar}
-                className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors lg:hidden"
+                className="lg:hidden"
                 aria-label="Toggle Sidebar"
               >
-                <Menu className="w-5 h-5" />
-              </button>
+                <Menu className="w-4 h-4" />
+              </IconButton>
             )}
 
             {/* Breadcrumb Navigation Trail */}
@@ -177,20 +181,30 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             {/* Notification Bell with Green Dot */}
-            <button className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 relative transition-colors">
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-600 ring-2 ring-white"></span>
-            </button>
+            <div className="relative">
+              <IconButton
+                variant="ghost"
+                context="neutral"
+                size="sm"
+                aria-label="Notifications"
+              >
+                <Bell className="w-4 h-4 text-slate-500" />
+              </IconButton>
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-600 ring-2 ring-white pointer-events-none"></span>
+            </div>
 
             {/* Primary Action Button */}
-            <button
+            <Button
               id="new-journal-entry-quick-btn"
+              variant="fill"
+              context="brand"
+              size="sm"
               onClick={onOpenNewEntry}
-              className="flex items-center space-x-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition-colors shadow-2xs min-h-[36px]"
+              className="font-bold flex items-center gap-1.5 shadow-2xs"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>Post Entry</span>
-            </button>
+            </Button>
           </div>
         </div>
       </div>

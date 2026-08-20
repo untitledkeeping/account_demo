@@ -1,0 +1,9 @@
+{
+  "projectName": "moon",
+  "coreFileId": "tvIuWlowgVG4gzXjDuVIEw",
+  "componentsProjectId": "408714341",
+  "outputFolder": "dist",
+  "target": "tailwindcss",
+  "preflight": false,
+  "themes": {}
+}

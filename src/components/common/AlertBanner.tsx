@@ -1,7 +1,7 @@
 // src/components/common/AlertBanner.tsx
 import React from 'react';
+import { Alert } from '@moondesignsystem/react';
 import { CheckCircle2, AlertCircle, AlertTriangle, Info, ShieldCheck } from 'lucide-react';
-import { tokens } from '../../styles/tokens';
 
 export interface AlertBannerProps {
   variant?: 'success' | 'error' | 'warning' | 'info' | 'indigo';
@@ -12,6 +12,14 @@ export interface AlertBannerProps {
   action?: React.ReactNode;
 }
 
+const contextMap: Record<string, 'positive' | 'negative' | 'caution' | 'info' | 'brand'> = {
+  success: 'positive',
+  error: 'negative',
+  warning: 'caution',
+  info: 'info',
+  indigo: 'brand',
+};
+
 export const AlertBanner: React.FC<AlertBannerProps> = ({
   variant = 'info',
   title,
@@ -20,28 +28,28 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
   className = '',
   action,
 }) => {
-  const color = tokens.colors[variant];
-
   const getIcon = () => {
     switch (variant) {
-      case 'success': return <CheckCircle2 className={`w-4 h-4 ${color.icon} shrink-0`} />;
-      case 'error': return <AlertCircle className={`w-4 h-4 ${color.icon} shrink-0`} />;
-      case 'warning': return <AlertTriangle className={`w-4 h-4 ${color.icon} shrink-0`} />;
-      case 'indigo': return <ShieldCheck className={`w-4 h-4 ${color.icon} shrink-0`} />;
-      default: return <Info className={`w-4 h-4 ${color.icon} shrink-0`} />;
+      case 'success': return <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />;
+      case 'error': return <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />;
+      case 'warning': return <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />;
+      case 'indigo': return <ShieldCheck className="w-4 h-4 shrink-0 text-indigo-600" />;
+      default: return <Info className="w-4 h-4 shrink-0 text-sky-600" />;
     }
   };
 
   return (
-    <div
-      className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 text-xs ${color.bg} ${color.border} ${color.text} ${className}`}
+    <Alert
+      variant="soft"
+      context={contextMap[variant] || 'info'}
+      className={`rounded-xl flex items-center justify-between gap-3 text-xs ${className}`}
     >
       <div className="flex items-center space-x-2.5 min-w-0">
         {getIcon()}
-        <div className="min-w-0">
+        <Alert.Content className="min-w-0">
           <div className="font-bold truncate">{title}</div>
           {description && <div className="text-[11px] opacity-85 mt-0.5">{description}</div>}
-        </div>
+        </Alert.Content>
       </div>
 
       <div className="flex items-center space-x-2 shrink-0">
@@ -52,6 +60,7 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
         )}
         {action}
       </div>
-    </div>
+    </Alert>
   );
 };
+
