@@ -100,7 +100,15 @@ export const AccountingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [activeClientId, setActiveClientId] = useState<string>(INITIAL_CLIENTS[0].id);
 
   // Navigation State
-  const [activeTab, setActiveTab] = useState<ActiveTab>('firm-overview');
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (path.includes('architecture') || path.includes('docs')) {
+        return 'architecture-docs';
+      }
+    }
+    return 'firm-overview';
+  });
 
   // Ledger & Financial Records
   const [accounts, setAccounts] = useState<ChartOfAccount[]>(INITIAL_ACCOUNTS);

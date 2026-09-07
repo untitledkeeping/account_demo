@@ -19,6 +19,7 @@ export const swaggerSpec = {
     },
   ],
   tags: [
+    { name: 'Authentication & Demo', description: 'Sign in, firm registration, password reset, 2FA/MFA, and instant demo login' },
     { name: 'Firm & Practice', description: 'Practice boundary, staff users, and global metrics' },
     { name: 'Client Businesses', description: 'Canadian corporate and sole-prop client entities' },
     { name: 'Chart of Accounts', description: 'Standard Canadian 4-digit GL accounts (Operating & Trust)' },
@@ -162,6 +163,174 @@ export const swaggerSpec = {
         summary: 'Service Health Check',
         responses: {
           200: { description: 'API is healthy' },
+        },
+      },
+    },
+    '/api/v1/auth/login': {
+      post: {
+        tags: ['Authentication & Demo'],
+        summary: 'Sign in with email and password',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['email'],
+                properties: {
+                  email: { type: 'string', example: 'benjamin@studiobooks.io' },
+                  password: { type: 'string', example: 'StudioBooks2026!' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Authenticated session or MFA requirement' },
+          401: { description: 'Invalid credentials' },
+        },
+      },
+    },
+    '/api/v1/auth/register': {
+      post: {
+        tags: ['Authentication & Demo'],
+        summary: 'Provision a new CPA Practice Firm and Root User',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['firmName', 'fullName', 'email'],
+                properties: {
+                  firmName: { type: 'string', example: 'Montréal CPA Partners Inc.' },
+                  fullName: { type: 'string', example: 'Sarah Tremblay, CPA' },
+                  email: { type: 'string', example: 'sarah@montrealcpa.ca' },
+                  password: { type: 'string', example: 'SecureCPA2026!' },
+                  provinceCode: { type: 'string', example: 'QC' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: 'Firm and User provisioned successfully' },
+          400: { description: 'Validation error' },
+        },
+      },
+    },
+    '/api/v1/auth/forgot-password': {
+      post: {
+        tags: ['Authentication & Demo'],
+        summary: 'Request password reset token',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['email'],
+                properties: {
+                  email: { type: 'string', example: 'benjamin@studiobooks.io' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Reset token dispatched' },
+        },
+      },
+    },
+    '/api/v1/auth/reset-password': {
+      post: {
+        tags: ['Authentication & Demo'],
+        summary: 'Complete password reset with token',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['token', 'newPassword'],
+                properties: {
+                  token: { type: 'string', example: 'reset_token_here' },
+                  newPassword: { type: 'string', example: 'NewSecret2026!' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Password reset confirmed' },
+          400: { description: 'Expired or invalid token' },
+        },
+      },
+    },
+    '/api/v1/auth/mfa/verify': {
+      post: {
+        tags: ['Authentication & Demo'],
+        summary: 'Verify 6-digit MFA / TOTP token',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['email', 'code'],
+                properties: {
+                  email: { type: 'string', example: 'sarah@studiobooks.io' },
+                  code: { type: 'string', example: '123456' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'MFA verified and session created' },
+          400: { description: 'Invalid MFA code' },
+        },
+      },
+    },
+    '/api/v1/auth/demo-users': {
+      get: {
+        tags: ['Authentication & Demo'],
+        summary: 'Get list of active practice demo personas',
+        responses: {
+          200: { description: 'Array of demo user profiles' },
+        },
+      },
+    },
+    '/api/v1/auth/demo-login': {
+      post: {
+        tags: ['Authentication & Demo'],
+        summary: '1-click instant demo login as any persona',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['userId'],
+                properties: {
+                  userId: { type: 'string', example: 'usr-ben-01' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Authenticated session for demo persona' },
+        },
+      },
+    },
+    '/api/v1/auth/me': {
+      get: {
+        tags: ['Authentication & Demo'],
+        summary: 'Get current authenticated user profile',
+        responses: {
+          200: { description: 'User and firm profile' },
+          401: { description: 'Unauthenticated' },
         },
       },
     },

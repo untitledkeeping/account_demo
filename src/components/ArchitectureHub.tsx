@@ -54,7 +54,7 @@ type SubTab =
   | 'api_tester'
   | 'roadmap';
 
-type EntityNodeType = 'firm' | 'user' | 'client' | 'account' | 'trust_account' | 'ledger' | 'banking' | 'tax';
+type EntityNodeType = 'auth' | 'firm' | 'user' | 'client' | 'account' | 'trust_account' | 'ledger' | 'banking' | 'tax' | 'reports';
 
 export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
   firm,
@@ -242,9 +242,143 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
         totalRemittanceDueCAD: 1224.2,
       },
     },
+    auth: {
+      title: 'Authentication & Session Security Layer',
+      cardinality: '1 User : N Sessions (30-Day Bearer Tokens)',
+      sqlTable: 'users (passwordHash, mfaSecret) + sessions (token, expiresAt)',
+      foreignKey: 'sessions.user_id -> users.id',
+      role: 'Cryptographic authentication, PBKDF2 password hashing, SOC-2 2FA/MFA, and instant demo mode switching.',
+      explanation:
+        'Protects the practice tenant. Users authenticate with email/password or 1-click demo login, receiving a signed 30-day session token. Two-factor authentication (MFA) requires a 6-digit TOTP verification code before session generation.',
+      sampleData: {
+        sessionToken: 'sb_sess_8f93a1c890...e412',
+        expiresAt: '2026-10-07T14:30:00.000Z',
+        twoFactorEnforced: true,
+        passwordAlgorithm: 'PBKDF2-SHA512 (1,000 iterations, 16-byte salt)',
+      },
+    },
+    reports: {
+      title: 'Financial Statements & Projections Engine',
+      cardinality: '1 Client Business : Real-Time Aggregated Balance Sheet, P&L, and Trial Balance',
+      sqlTable: 'Derived from chart_of_accounts + ledger_lines',
+      foreignKey: 'client_business_id -> client_businesses.id',
+      role: 'Mathematical compilation of Net Income, Balance Sheet Equilibrium (Assets === Liabilities + Equity), and Trial Balance.',
+      explanation:
+        'Aggregates raw immutable ledger debits and credits into publication-ready CPA financial statements. Enforces the fundamental accounting equation with zero mathematical drift.',
+      sampleData: {
+        totalAssets: 142850.5,
+        totalLiabilities: 38420.2,
+        totalEquity: 104430.3,
+        isBalanced: true,
+        variance: 0.0,
+      },
+    },
   };
 
   const endpoints = [
+    {
+      id: 'post_auth_login',
+      method: 'POST',
+      path: '/api/v1/auth/login',
+      title: 'Staff & CPA Sign In',
+      description: 'Authenticates a practice user with email and password, returning an active Bearer session token or triggering 2FA/MFA if enabled.',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      mockPayload: {
+        email: 'benjamin@studiobooks.io',
+        password: 'StudioBooks2026!',
+      },
+      mockResponse: {
+        session: {
+          token: 'sb_sess_8f93a1c890de4417b12',
+          expiresAt: '2026-10-07T14:30:00.000Z',
+          user: {
+            id: 'usr-ben-01',
+            firmId: firm.id,
+            email: 'benjamin@studiobooks.io',
+            fullName: 'Benjamin Ayesu-Attah',
+            role: 'firm_owner',
+            twoFactorEnabled: false,
+            firmName: firm.name,
+          },
+        },
+      },
+    },
+    {
+      id: 'get_auth_demo_users',
+      method: 'GET',
+      path: '/api/v1/auth/demo-users',
+      title: 'List Demo Personas (Zero Friction)',
+      description: 'Returns all pre-seeded team personas (Firm Owner, Senior CPA, Auditor) for 1-click test logins.',
+      headers: {},
+      mockResponse: [
+        { id: 'usr-ben-01', fullName: 'Benjamin Ayesu-Attah', role: 'firm_owner', email: 'benjamin@studiobooks.io' },
+        { id: 'usr-sarah-04', fullName: 'Sarah Tremblay, CPA', role: 'senior_cpa', email: 'sarah@studiobooks.io' },
+      ],
+    },
+    {
+      id: 'post_auth_demo_login',
+      method: 'POST',
+      path: '/api/v1/auth/demo-login',
+      title: 'Instant 1-Click Demo Login',
+      description: 'Instantly provisions a valid session token for any persona without requiring passwords, ideal for rapid co-founder reviews.',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      mockPayload: {
+        userId: 'usr-ben-01',
+      },
+      mockResponse: {
+        token: 'sb_sess_demo_384029381',
+        expiresAt: '2026-10-07T14:30:00.000Z',
+        user: {
+          id: 'usr-ben-01',
+          fullName: 'Benjamin Ayesu-Attah',
+          role: 'firm_owner',
+          firmName: firm.name,
+        },
+      },
+    },
+    {
+      id: 'get_financial_pnl',
+      method: 'GET',
+      path: `/api/v1/clients/${activeClient.id}/reports/pnl`,
+      title: 'Profit & Loss Statement (P&L)',
+      description: 'Real-time compilation of Revenues, COGS, Gross Profit, Operating Expenses, and Net Income directly from database records.',
+      headers: {
+        'x-firm-id': firm.id,
+        'x-client-id': activeClient.id,
+      },
+      mockResponse: {
+        period: 'Year to Date 2026',
+        totalRevenue: 34500.0,
+        totalCogs: 8200.0,
+        grossProfit: 26300.0,
+        totalExpenses: 9420.5,
+        netIncome: 16879.5,
+      },
+    },
+    {
+      id: 'get_financial_balance_sheet',
+      method: 'GET',
+      path: `/api/v1/clients/${activeClient.id}/reports/balance-sheet`,
+      title: 'Balance Sheet & Equilibrium Proof',
+      description: 'Mathematical proof verifying Assets = Liabilities + Equity with live variance detection.',
+      headers: {
+        'x-firm-id': firm.id,
+        'x-client-id': activeClient.id,
+      },
+      mockResponse: {
+        asOfDate: '2026-09-07',
+        totalAssets: 142850.5,
+        totalLiabilities: 38420.2,
+        totalEquity: 104430.3,
+        totalLiabilitiesAndEquity: 142850.5,
+        isBalanced: true,
+        variance: 0.0,
+      },
+    },
     {
       id: 'get_clients',
       method: 'GET',
@@ -521,22 +655,83 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
           </div>
 
           {/* Interactive Visual Hierarchy Flow Canvas */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left: Visual Flow Nodes */}
-            <div className="lg:col-span-7 space-y-4">
-              <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/90 shadow-xs p-5 sm:p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-bold text-slate-900 flex items-center space-x-2">
-                    <Layers className="w-4 h-4 text-emerald-600" />
-                    <span>Interactive Domain Flow Diagram</span>
-                  </h2>
-                  <span className="text-[11px] text-slate-500 font-medium">Click any node to inspect its database contract</span>
+          <div className="space-y-4">
+            {/* Live Swagger UI Quick Banner */}
+            <div className="bg-emerald-50/90 border border-emerald-200/90 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-center space-x-3 text-left">
+                <div className="w-9 h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+                  API
                 </div>
+                <div>
+                  <div className="font-bold text-xs text-emerald-950 flex items-center space-x-2">
+                    <span>Live Swagger OpenAPI 3.0 Documentation</span>
+                    <span className="text-[10px] bg-emerald-200 text-emerald-900 font-bold px-1.5 py-0.2 rounded">
+                      ONLINE
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-emerald-800 mt-0.5">
+                    Live endpoint runner mounted at <code className="font-mono font-bold bg-white/70 px-1 py-0.5 rounded">/api/docs</code>. Interactive execution for Auth, Clients, Ledgers & Reports.
+                  </p>
+                </div>
+              </div>
+              <a
+                href="/api/docs/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-colors shadow-2xs shrink-0"
+              >
+                <span>Open Swagger UI</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
 
-                {/* Flow Diagram Cards Stack */}
-                <div className="space-y-3">
-                  {/* LEVEL 1: FIRM */}
-                  <div
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left: Visual Flow Nodes */}
+              <div className="lg:col-span-7 space-y-4">
+                <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/90 shadow-xs p-5 sm:p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                      <Layers className="w-4 h-4 text-emerald-600" />
+                      <span>Interactive Domain Flow Diagram</span>
+                    </h2>
+                    <span className="text-[11px] text-slate-500 font-medium">Click any node to inspect contract</span>
+                  </div>
+
+                  {/* Flow Diagram Cards Stack */}
+                  <div className="space-y-3">
+                    {/* LEVEL 0: AUTHENTICATION & SECURITY GATE */}
+                    <div
+                      onClick={() => setSelectedEntity('auth')}
+                      className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer ${
+                        selectedEntity === 'auth'
+                          ? 'border-indigo-500 bg-indigo-50/40 shadow-sm'
+                          : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold shadow-xs">
+                            <KeyRound className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <span className="font-bold text-xs text-slate-900">Level 0: Authentication & Session Gate</span>
+                              <span className="text-[10px] font-bold px-1.5 py-0.2 bg-indigo-100 text-indigo-800 rounded">Security & Demo</span>
+                            </div>
+                            <p className="text-[11px] text-slate-600">PBKDF2 Password Hashing • 2FA/MFA • 30-Day Bearer Tokens • 1-Click Demo Login</p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-mono font-bold text-indigo-600">AUTH</span>
+                      </div>
+                    </div>
+
+                    {/* Connector Arrow */}
+                    <div className="flex justify-center text-slate-400">
+                      <ArrowDown className="w-4 h-4 stroke-[2.5]" />
+                    </div>
+
+                    {/* LEVEL 1: FIRM */}
+                    <div
                     onClick={() => setSelectedEntity('firm')}
                     className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${
                       selectedEntity === 'firm'
@@ -711,6 +906,41 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
                       <span className="text-[9px] text-purple-700 font-mono">GST / QST / HST</span>
                     </div>
                   </div>
+
+                  {/* Connector Arrow */}
+                  <div className="flex justify-center text-slate-400">
+                    <ArrowDown className="w-4 h-4 stroke-[2.5]" />
+                  </div>
+
+                  {/* LEVEL 5: FINANCIAL STATEMENTS & CPA PROJECTIONS */}
+                  <div
+                    onClick={() => setSelectedEntity('reports')}
+                    className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer ${
+                      selectedEntity === 'reports'
+                        ? 'border-emerald-500 bg-emerald-50/40 shadow-sm'
+                        : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-bold shadow-xs">
+                          <FileSpreadsheet className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <span className="font-bold text-xs text-slate-900">Level 5: Financial Statements & Projections</span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded">
+                              CPA Reporting
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-600">
+                            Real-Time P&L • Balance Sheet ($Assets = Liabilities + Equity$) • Trial Balance • Export PDF/CSV
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-emerald-600">P&L / BS</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -794,6 +1024,7 @@ export const ArchitectureHub: React.FC<ArchitectureHubProps> = ({
                 </div>
               </div>
             </div>
+          </div>
           </div>
         </div>
       )}

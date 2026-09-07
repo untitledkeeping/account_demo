@@ -20,14 +20,31 @@ model Firm {
 }
 
 model User {
-  id                String   @id @default(uuid())
+  id                String    @id @default(uuid())
   firmId            String
-  email             String   @unique
+  email             String    @unique
   fullName          String
-  role              String   @default("staff_bookkeeper")
-  twoFactorEnabled  Boolean  @default(false)
-  createdAt         DateTime @default(now())
-  firm              Firm     @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  passwordHash      String?
+  role              String    @default("staff_bookkeeper")
+  twoFactorEnabled  Boolean   @default(false)
+  mfaSecret         String?
+  resetToken        String?
+  resetTokenExpiry  DateTime?
+  lastLoginAt       DateTime?
+  createdAt         DateTime  @default(now())
+  firm              Firm      @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  sessions          Session[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model ClientBusiness {

@@ -8,6 +8,8 @@ import { OCRService } from '../services/ocrService';
 import { extractTaxesFromGrossTotal } from '../services/taxService';
 import { CanadianProvince } from '../../types';
 
+import { AuthService } from '../services/authService';
+
 export const apiRouter = Router();
 
 // -------------------------------------------------------------
@@ -15,6 +17,134 @@ export const apiRouter = Router();
 // -------------------------------------------------------------
 apiRouter.get('/health', async (req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// -------------------------------------------------------------
+// 2. Authentication & Demo Mode
+// -------------------------------------------------------------
+apiRouter.post('/auth/login', async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email address is required.' });
+    }
+
+    const result = await AuthService.login(email, password);
+    res.json(result);
+  } catch (error: any) {
+    res.status(401).json({ error: error.message });
+  }
+});
+
+apiRouter.post('/auth/register', async (req: Request, res: Response) => {
+  try {
+    const { firmName, fullName, email, password, provinceCode } = req.body;
+    if (!firmName || !fullName || !email) {
+      return res.status(400).json({ error: 'Firm name, full name, and email are required.' });
+    }
+
+    const result = await AuthService.registerFirm({
+      firmName,
+      fullName,
+      email,
+      password,
+      provinceCode,
+    });
+    res.status(201).json(result);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+apiRouter.post('/auth/forgot-password', async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email address is required.' });
+    }
+
+    const result = await AuthService.requestPasswordReset(email);
+    res.json(result);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+apiRouter.post('/auth/reset-password', async (req: Request, res: Response) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) {
+      return res.status(400).json({ error: 'Reset token and new password are required.' });
+    }
+
+    const result = await AuthService.resetPassword(token, newPassword);
+    res.json(result);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+apiRouter.post('/auth/mfa/verify', async (req: Request, res: Response) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) {
+      return res.status(400).json({ error: 'Email and 6-digit verification code are required.' });
+    }
+
+    const result = await AuthService.verifyMfa(email, code);
+    res.json(result);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+apiRouter.get('/auth/demo-users', async (req: Request, res: Response) => {
+  try {
+    const users = await AuthService.getDemoUsers();
+    res.json(users);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+apiRouter.post('/auth/demo-login', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required for demo login.' });
+    }
+
+    const result = await AuthService.demoLogin(userId);
+    res.json(result);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+apiRouter.get('/auth/me', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      const fallbackUserId = req.headers['x-user-id'] as string;
+      if (fallbackUserId) {
+        const user = await prisma.user.findUnique({
+          where: { id: fallbackUserId },
+          include: { firm: true },
+        });
+        if (user) return res.json(user);
+      }
+      return res.status(401).json({ error: 'No authorization header provided.' });
+    }
+
+    const user = await AuthService.validateSession(authHeader);
+    if (!user) {
+      return res.status(401).json({ error: 'Session expired or invalid.' });
+    }
+
+    res.json(user);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 apiRouter.get('/firm/overview', async (req: Request, res: Response) => {
@@ -468,3 +598,41 @@ apiRouter.get('/clients/:clientId/reports/sales-tax-summary', async (req: Reques
     res.status(500).json({ error: error.message });
   }
 });
+
+apiRouter.get('/clients/:clientId/reports/pnl', async (req: Request, res: Response) => {
+  try {
+    const { clientId } = req.params;
+    const startDate = req.query.startDate as string | undefined;
+    const endDate = req.query.endDate as string | undefined;
+
+    const pnl = await LedgerService.getProfitAndLoss(clientId, startDate, endDate);
+    res.json(pnl);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+apiRouter.get('/clients/:clientId/reports/balance-sheet', async (req: Request, res: Response) => {
+  try {
+    const { clientId } = req.params;
+    const asOfDate = req.query.asOfDate as string | undefined;
+
+    const bs = await LedgerService.getBalanceSheet(clientId, asOfDate);
+    res.json(bs);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+apiRouter.get('/clients/:clientId/reports/trial-balance', async (req: Request, res: Response) => {
+  try {
+    const { clientId } = req.params;
+    const asOfDate = req.query.asOfDate as string | undefined;
+
+    const tb = await LedgerService.getTrialBalance(clientId, asOfDate);
+    res.json(tb);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+

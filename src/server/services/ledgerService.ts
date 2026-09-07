@@ -322,4 +322,164 @@ export class LedgerService {
       totalRemittanceDue,
     };
   }
+
+  /**
+   * Generate Profit & Loss Statement (P&L) from database records
+   */
+  static async getProfitAndLoss(clientBusinessId: string, startDate?: string, endDate?: string) {
+    const balanceMap = await this.getAccountBalances(clientBusinessId, endDate);
+    const revenueAccounts: any[] = [];
+    const cogsAccounts: any[] = [];
+    const expenseAccounts: any[] = [];
+
+    let totalRevenue = 0;
+    let totalCogs = 0;
+    let totalExpenses = 0;
+
+    for (const id in balanceMap) {
+      const bal = balanceMap[id];
+      if (bal.account.type === 'revenue' && bal.netBalance !== 0) {
+        revenueAccounts.push(bal);
+        totalRevenue += bal.netBalance;
+      } else if (bal.account.classification === 'cost_of_goods_sold' && bal.netBalance !== 0) {
+        cogsAccounts.push(bal);
+        totalCogs += bal.netBalance;
+      } else if (bal.account.type === 'expense' && bal.netBalance !== 0) {
+        expenseAccounts.push(bal);
+        totalExpenses += bal.netBalance;
+      }
+    }
+
+    totalRevenue = Math.round(totalRevenue * 100) / 100;
+    totalCogs = Math.round(totalCogs * 100) / 100;
+    totalExpenses = Math.round(totalExpenses * 100) / 100;
+
+    const grossProfit = Math.round((totalRevenue - totalCogs) * 100) / 100;
+    const netIncome = Math.round((grossProfit - totalExpenses) * 100) / 100;
+
+    return {
+      period: startDate && endDate ? `${startDate} to ${endDate}` : 'Year to Date 2026',
+      revenueAccounts,
+      totalRevenue,
+      cogsAccounts,
+      totalCogs,
+      grossProfit,
+      expenseAccounts,
+      totalExpenses,
+      netIncome,
+    };
+  }
+
+  /**
+   * Generate Balance Sheet Statement
+   */
+  static async getBalanceSheet(clientBusinessId: string, asOfDate?: string) {
+    const balanceMap = await this.getAccountBalances(clientBusinessId, asOfDate);
+    const assetAccounts: any[] = [];
+    const liabilityAccounts: any[] = [];
+    const equityAccounts: any[] = [];
+
+    let totalAssets = 0;
+    let totalLiabilities = 0;
+    let totalEquityRaw = 0;
+
+    const pnl = await this.getProfitAndLoss(clientBusinessId, undefined, asOfDate);
+    const currentPeriodNetIncome = pnl.netIncome;
+
+    for (const id in balanceMap) {
+      const bal = balanceMap[id];
+      if (bal.account.type === 'asset' && bal.netBalance !== 0) {
+        assetAccounts.push(bal);
+        totalAssets += bal.netBalance;
+      } else if (bal.account.type === 'liability' && bal.netBalance !== 0) {
+        liabilityAccounts.push(bal);
+        totalLiabilities += bal.netBalance;
+      } else if (bal.account.type === 'equity' && bal.netBalance !== 0) {
+        equityAccounts.push(bal);
+        totalEquityRaw += bal.netBalance;
+      }
+    }
+
+    totalAssets = Math.round(totalAssets * 100) / 100;
+    totalLiabilities = Math.round(totalLiabilities * 100) / 100;
+    const totalEquity = Math.round((totalEquityRaw + currentPeriodNetIncome) * 100) / 100;
+    const totalLiabilitiesAndEquity = Math.round((totalLiabilities + totalEquity) * 100) / 100;
+    const variance = Math.round(Math.abs(totalAssets - totalLiabilitiesAndEquity) * 100) / 100;
+
+    return {
+      asOfDate: asOfDate || new Date().toISOString().split('T')[0],
+      assetAccounts,
+      totalAssets,
+      liabilityAccounts,
+      totalLiabilities,
+      equityAccounts,
+      retainedEarnings: totalEquityRaw,
+      currentPeriodNetIncome,
+      totalEquity,
+      totalLiabilitiesAndEquity,
+      isBalanced: variance < 0.05,
+      variance,
+    };
+  }
+
+  /**
+   * Generate Trial Balance Working Papers
+   */
+  static async getTrialBalance(clientBusinessId: string, asOfDate?: string) {
+    const balanceMap = await this.getAccountBalances(clientBusinessId, asOfDate);
+    const items: Array<{
+      accountCode: string;
+      accountName: string;
+      type: string;
+      debit: number;
+      credit: number;
+    }> = [];
+
+    let totalDebits = 0;
+    let totalCredits = 0;
+
+    for (const id in balanceMap) {
+      const bal = balanceMap[id];
+      let debit = 0;
+      let credit = 0;
+
+      if (bal.netBalance > 0) {
+        if (bal.account.type === 'asset' || bal.account.type === 'expense') {
+          debit = bal.netBalance;
+        } else {
+          credit = bal.netBalance;
+        }
+      } else if (bal.netBalance < 0) {
+        if (bal.account.type === 'asset' || bal.account.type === 'expense') {
+          credit = Math.abs(bal.netBalance);
+        } else {
+          debit = Math.abs(bal.netBalance);
+        }
+      }
+
+      if (debit !== 0 || credit !== 0) {
+        items.push({
+          accountCode: bal.account.accountCode,
+          accountName: bal.account.name,
+          type: bal.account.type,
+          debit,
+          credit,
+        });
+        totalDebits += debit;
+        totalCredits += credit;
+      }
+    }
+
+    items.sort((a, b) => a.accountCode.localeCompare(b.accountCode));
+    totalDebits = Math.round(totalDebits * 100) / 100;
+    totalCredits = Math.round(totalCredits * 100) / 100;
+    const variance = Math.round(Math.abs(totalDebits - totalCredits) * 100) / 100;
+
+    return {
+      items,
+      totalDebits,
+      totalCredits,
+      isBalanced: variance < 0.05,
+    };
+  }
 }

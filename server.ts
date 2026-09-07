@@ -31,6 +31,13 @@ app.use('/api', (req, res, next) => {
 
 // Mount Swagger Interactive API Docs
 app.get('/api/docs/swagger.json', (req, res) => res.json(swaggerSpec));
+app.use('/api/docs', (req, res, next) => {
+  if (req.path === '' || req.path === '/') {
+    // Serve swagger UI setup
+    return (swaggerUi.setup(swaggerSpec) as any)(req, res, next);
+  }
+  next();
+});
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Mount API routes
@@ -42,7 +49,12 @@ async function start() {
       server: { middlewareMode: true },
       appType: 'spa',
     });
-    app.use(vite.middlewares);
+    app.use((req, res, next) => {
+      if (req.url.startsWith('/api')) {
+        return next();
+      }
+      vite.middlewares(req, res, next);
+    });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
