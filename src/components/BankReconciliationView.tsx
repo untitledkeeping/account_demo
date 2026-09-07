@@ -1,4 +1,6 @@
+// src/components/BankReconciliationView.tsx
 import React from 'react';
+import { Button, IconButton, Input, Select, Badge as MoonBadge, Table } from '@moondesignsystem/react';
 import {
   ArrowRightLeft,
   CheckCircle2,
@@ -16,6 +18,7 @@ import {
   Filter,
   AlertTriangle,
 } from 'lucide-react';
+
 import { ClientBusiness, BankTransaction, ChartOfAccount, TaxCode, User } from '../types';
 import { formatCurrency, extractTaxesFromGrossTotal } from '../utils/taxCalculator';
 import { useBankReconciliation } from '../hooks/useBankReconciliation';
@@ -136,13 +139,16 @@ export const BankReconciliationView: React.FC<BankReconciliationViewProps> = ({
             </div>
           </div>
 
-          <button
+          <Button
+            variant="fill"
+            context="brand"
+            size="sm"
             onClick={() => autoReconcileHighConfidence()}
-            className="w-full sm:w-auto flex items-center justify-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-2 rounded-lg text-xs transition-all shadow-xs min-h-[40px] whitespace-nowrap"
+            className="w-full sm:w-auto flex items-center justify-center space-x-1.5 font-bold whitespace-nowrap"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>Auto-Match ({stats.highConfidenceCount})</span>
-          </button>
+          </Button>
         </div>
       )}
 
@@ -151,63 +157,70 @@ export const BankReconciliationView: React.FC<BankReconciliationViewProps> = ({
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
           {/* View Switcher Tabs */}
           <div className="flex items-center bg-slate-100 p-0.5 rounded-lg text-xs">
-            <button
+            <Button
+              variant={activeView === 'unreconciled' ? 'fill' : 'ghost'}
+              context={activeView === 'unreconciled' ? 'brand' : 'neutral'}
+              size="sm"
               onClick={() => setActiveView('unreconciled')}
-              className={`flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-md font-bold transition-all min-h-[36px] ${
-                activeView === 'unreconciled'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 font-bold"
             >
               <ArrowRightLeft className="w-3.5 h-3.5" />
               <span>Needs Match ({stats.unreconciledCount})</span>
-            </button>
+            </Button>
 
-            <button
+            <Button
+              variant={activeView === 'reconciled' ? 'fill' : 'ghost'}
+              context={activeView === 'reconciled' ? 'brand' : 'neutral'}
+              size="sm"
               onClick={() => setActiveView('reconciled')}
-              className={`flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-md font-bold transition-all min-h-[36px] ${
-                activeView === 'reconciled'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 font-bold"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Reconciled ({stats.reconciledCount})</span>
-            </button>
+            </Button>
           </div>
 
           {/* Search Bar */}
           <div className="relative flex-1 max-w-sm">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
+            <Input
               type="text"
               placeholder="Search description, date, amount..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white"
+              className="pl-8"
             />
           </div>
 
           {/* Direction Filter */}
           <div className="flex items-center space-x-1 bg-slate-100 p-0.5 rounded-lg text-xs self-start md:self-auto">
-            <button
+            <Button
+              variant={typeFilter === 'ALL' ? 'fill' : 'ghost'}
+              context="neutral"
+              size="sm"
               onClick={() => setTypeFilter('ALL')}
-              className={`px-2.5 py-1 rounded-md font-medium min-h-[32px] ${typeFilter === 'ALL' ? 'bg-white font-bold text-slate-900 shadow-xs' : 'text-slate-600'}`}
+              className={`px-2.5 py-1 ${typeFilter === 'ALL' ? 'font-bold' : ''}`}
             >
               All
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={typeFilter === 'OUTFLOW' ? 'fill' : 'ghost'}
+              context={typeFilter === 'OUTFLOW' ? 'negative' : 'neutral'}
+              size="sm"
               onClick={() => setTypeFilter('OUTFLOW')}
-              className={`px-2.5 py-1 rounded-md font-medium min-h-[32px] ${typeFilter === 'OUTFLOW' ? 'bg-white font-bold text-rose-700 shadow-xs' : 'text-slate-600'}`}
+              className={`px-2.5 py-1 ${typeFilter === 'OUTFLOW' ? 'font-bold' : ''}`}
             >
               Outflow (-)
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={typeFilter === 'INFLOW' ? 'fill' : 'ghost'}
+              context={typeFilter === 'INFLOW' ? 'positive' : 'neutral'}
+              size="sm"
               onClick={() => setTypeFilter('INFLOW')}
-              className={`px-2.5 py-1 rounded-md font-medium min-h-[32px] ${typeFilter === 'INFLOW' ? 'bg-white font-bold text-emerald-700 shadow-xs' : 'text-slate-600'}`}
+              className={`px-2.5 py-1 ${typeFilter === 'INFLOW' ? 'font-bold' : ''}`}
             >
               Inflow (+)
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -277,27 +290,25 @@ export const BankReconciliationView: React.FC<BankReconciliationViewProps> = ({
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                       Target Account
                     </label>
-                    <select
+                    <Select
                       value={currentAccountId}
                       onChange={(e) => handleAccountChange(tx.id, e.target.value)}
-                      className="w-full bg-white border border-slate-300 text-xs text-slate-800 font-medium rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500 min-h-[38px]"
                     >
                       {accounts.map((acc) => (
                         <option key={acc.id} value={acc.id}>
                           {acc.accountCode} - {acc.name}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
 
                   <div className="space-y-1 flex-1 sm:w-44">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                       Tax Code
                     </label>
-                    <select
+                    <Select
                       value={currentTaxCode}
                       onChange={(e) => handleTaxCodeChange(tx.id, e.target.value as TaxCode)}
-                      className="w-full bg-white border border-slate-300 text-xs text-slate-800 font-medium rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500 min-h-[38px]"
                     >
                       <option value="GST_QST">GST (5%) + QST (9.975%)</option>
                       <option value="GST_5">GST Only (5%)</option>
@@ -305,7 +316,7 @@ export const BankReconciliationView: React.FC<BankReconciliationViewProps> = ({
                       <option value="HST_15">HST (15% Atlantic)</option>
                       <option value="EXEMPT">Exempt (0%)</option>
                       <option value="NONE">No Tax (0%)</option>
-                    </select>
+                    </Select>
                   </div>
 
                   <div className="text-left sm:text-right font-mono self-stretch sm:self-center min-w-[100px] py-1">
@@ -320,13 +331,16 @@ export const BankReconciliationView: React.FC<BankReconciliationViewProps> = ({
                     )}
                   </div>
 
-                  <button
+                  <Button
+                    variant="fill"
+                    context="brand"
+                    size="sm"
                     onClick={() => executeReconcile(tx)}
-                    className="flex items-center justify-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-lg text-xs transition-all shadow-xs min-h-[40px]"
+                    className="flex items-center justify-center space-x-1.5 font-bold"
                   >
                     <Check className="w-3.5 h-3.5 stroke-[3]" />
                     <span>Reconcile</span>
-                  </button>
+                  </Button>
                 </div>
               </div>
             );

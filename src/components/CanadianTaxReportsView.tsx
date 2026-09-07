@@ -1,4 +1,6 @@
+// src/components/CanadianTaxReportsView.tsx
 import React from 'react';
+import { Button, IconButton, Input, Select, Badge as MoonBadge, Table } from '@moondesignsystem/react';
 import {
   FileCheck2,
   Download,
@@ -16,6 +18,7 @@ import {
   Check,
   X,
 } from 'lucide-react';
+
 import { ClientBusiness, ChartOfAccount, JournalEntry, User } from '../types';
 import { formatCurrency } from '../utils/taxCalculator';
 import { useCanadianTax } from '../hooks/useCanadianTax';
@@ -80,41 +83,53 @@ export const CanadianTaxReportsView: React.FC<CanadianTaxReportsViewProps> = ({
 
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <select
+          <Select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="bg-slate-50 border border-slate-200 text-xs text-slate-800 font-bold rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500 min-h-[40px]"
           >
             <option value="2026-Q1">2026 Q1 (Jan 1 - Mar 31)</option>
             <option value="2026-Q2">2026 Q2 (Apr 1 - Jun 30)</option>
             <option value="2026-Q3">2026 Q3 (Jul 1 - Sep 30)</option>
             <option value="2026-YTD">2026 Full Year to Date</option>
-          </select>
+          </Select>
 
-          <button
+          <Button
+            variant="outline"
+            context="neutral"
+            size="sm"
             onClick={handleExport}
-            className="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-3.5 py-2 rounded-xl text-xs transition-all border border-slate-200 min-h-[40px]"
+            className="flex items-center space-x-1.5 font-bold"
           >
             {isExported ? (
               <>
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Exported!</span>
+                <span>Exported (CSV)</span>
               </>
             ) : (
               <>
-                <Download className="w-3.5 h-3.5 text-slate-600" />
-                <span>Export PDF</span>
+                <Download className="w-3.5 h-3.5" />
+                <span>Export Official Return</span>
               </>
             )}
-          </button>
+          </Button>
 
-          <button
-            onClick={() => setIsDeclarationModalOpen(true)}
-            className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-xs min-h-[40px]"
-          >
-            <PenLine className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>Sign & File</span>
-          </button>
+          {filingDeclaration?.status === 'filed' ? (
+            <div className="flex items-center space-x-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs font-bold">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>Certified & Filed</span>
+            </div>
+          ) : (
+            <Button
+              variant="fill"
+              context="brand"
+              size="sm"
+              onClick={() => setIsDeclarationModalOpen(true)}
+              className="flex items-center space-x-1.5 font-bold"
+            >
+              <PenLine className="w-3.5 h-3.5 text-emerald-400" />
+              <span>E-File Declaration</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -319,12 +334,14 @@ export const CanadianTaxReportsView: React.FC<CanadianTaxReportsViewProps> = ({
                 <ShieldCheck className="w-5 h-5 text-emerald-600" />
                 <h3 className="font-bold text-sm text-slate-900">Sign & Certify Tax Return</h3>
               </div>
-              <button
+              <IconButton
+                variant="ghost"
+                size="sm"
+                aria-label="Close"
                 onClick={() => setIsDeclarationModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 min-h-[36px] min-w-[36px] flex items-center justify-center"
               >
                 <X className="w-4 h-4" />
-              </button>
+              </IconButton>
             </div>
 
             <div className="space-y-3 text-xs">
@@ -349,18 +366,21 @@ export const CanadianTaxReportsView: React.FC<CanadianTaxReportsViewProps> = ({
             </div>
 
             <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setIsDeclarationModalOpen(false)}
-                className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-semibold text-xs min-h-[40px]"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                className="!bg-emerald-600 hover:!bg-emerald-500 text-white font-bold"
                 onClick={signAndFileReturn}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs shadow-xs min-h-[40px]"
               >
                 Confirm & Sign Return
-              </button>
+              </Button>
             </div>
           </div>
         </div>

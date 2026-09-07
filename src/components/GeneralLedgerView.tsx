@@ -1,34 +1,30 @@
+// src/components/GeneralLedgerView.tsx
 import React, { useState } from 'react';
+import { Button, IconButton, Input, Select, Badge as MoonBadge, Table } from '@moondesignsystem/react';
 import {
   BookOpen,
   Plus,
   Search,
-  Filter,
   CheckCircle2,
   AlertCircle,
   RotateCcw,
   Tag,
-  Calendar,
-  Layers,
   FileText,
-  Building,
-  ArrowDownUp,
   Receipt,
   ArrowRightLeft,
   User as UserIcon,
+  UserCheck,
+  Briefcase,
   ShieldCheck,
   Download,
   Check,
-  ChevronsUpDown,
-  UserCheck,
-  Briefcase,
-  History,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
 import { ClientBusiness, JournalEntry, ChartOfAccount, User } from '../types';
 import { formatCurrency } from '../utils/taxCalculator';
 import { useGeneralLedger } from '../hooks/useGeneralLedger';
+
 
 interface GeneralLedgerViewProps {
   client: ClientBusiness;
@@ -93,33 +89,33 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       case 'ocr_receipt':
       case 'receipt_ocr':
         return (
-          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200/90">
+          <MoonBadge variant="soft" context="info" className="inline-flex items-center space-x-1 font-semibold text-[10px]">
             <Receipt className="w-2.5 h-2.5 text-slate-500" />
             <span>OCR Receipt</span>
-          </span>
+          </MoonBadge>
         );
       case 'bank_feed':
         return (
-          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200/90">
+          <MoonBadge variant="soft" context="brand" className="inline-flex items-center space-x-1 font-semibold text-[10px]">
             <ArrowRightLeft className="w-2.5 h-2.5 text-slate-500" />
             <span>Bank Feed</span>
-          </span>
+          </MoonBadge>
         );
       case 'qbo_import':
       case 'wave_import':
       case 'csv_import':
         return (
-          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200/90">
+          <MoonBadge variant="soft" context="neutral" className="inline-flex items-center space-x-1 font-semibold text-[10px]">
             <FileText className="w-2.5 h-2.5 text-slate-500" />
             <span>CSV Import</span>
-          </span>
+          </MoonBadge>
         );
       default:
         return (
-          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200/90">
+          <MoonBadge variant="soft" context="neutral" className="inline-flex items-center space-x-1 font-semibold text-[10px]">
             <Tag className="w-2.5 h-2.5 text-slate-500" />
             <span>Manual</span>
-          </span>
+          </MoonBadge>
         );
     }
   };
@@ -156,23 +152,28 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
 
         {/* Header Action Buttons */}
         <div className="flex items-center space-x-2 sm:space-x-3 self-stretch sm:self-auto">
-          <button
+          <Button
+            variant="outline"
+            context="neutral"
+            size="sm"
             onClick={exportLedgerToCSV}
-            title="Download CSV report with full staff creator attribution"
-            className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-colors border border-slate-200 min-h-[40px]"
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5"
           >
-            <Download className="w-3.5 h-3.5 text-slate-600" />
+            <Download className="w-3.5 h-3.5" />
             <span>Export CSV</span>
-          </button>
+          </Button>
 
-          <button
+          <Button
             id="post-journal-entry-main-btn"
+            variant="fill"
+            context="brand"
+            size="sm"
             onClick={onOpenNewEntry}
-            className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-xs min-h-[40px]"
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 font-bold"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>Post Entry</span>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -249,39 +250,37 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           {/* Search Bar */}
           <div className="relative flex-1">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
+            <Input
               type="text"
               placeholder="Search memo, entry #, line description, or author..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-colors"
+              className="pl-8"
             />
           </div>
 
           {/* Quick Staff Filter Tabs */}
           <div className="flex items-center bg-slate-100 p-0.5 rounded-lg text-xs">
-            <button
+            <Button
+              variant={authorFilter === 'ALL' ? 'fill' : 'ghost'}
+              context={authorFilter === 'ALL' ? 'neutral' : 'neutral'}
+              size="sm"
               onClick={() => setAuthorFilter('ALL')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-all min-h-[36px] ${
-                authorFilter === 'ALL'
-                  ? 'bg-white text-slate-900 shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className={`font-medium ${authorFilter === 'ALL' ? 'font-bold' : ''}`}
             >
               All Staff ({entries.length})
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={authorFilter === 'MINE' ? 'fill' : 'ghost'}
+              context={authorFilter === 'MINE' ? 'brand' : 'neutral'}
+              size="sm"
               onClick={() => setAuthorFilter('MINE')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center space-x-1.5 min-h-[36px] ${
-                authorFilter === 'MINE'
-                  ? 'bg-emerald-600 text-white shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className="flex items-center space-x-1.5 font-medium"
             >
               <UserIcon className="w-3 h-3" />
               <span>My Entries ({staffStats.currentUserEntriesCount})</span>
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -291,10 +290,9 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
             {/* Bookkeeper Dropdown */}
             <div className="flex items-center space-x-1 text-slate-500">
               <span>Author:</span>
-              <select
+              <Select
                 value={authorFilter}
                 onChange={(e) => setAuthorFilter(e.target.value)}
-                className="bg-slate-50 border border-slate-200 text-xs text-slate-700 font-medium rounded-lg px-2 py-1 focus:outline-none focus:border-emerald-500"
               >
                 <option value="ALL">All Authors</option>
                 <option value="MINE">My Entries ({currentUser.fullName})</option>
@@ -303,23 +301,22 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                     {author} {author.toLowerCase() === currentUser.fullName.toLowerCase() ? '(You)' : ''}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             {/* Source Filter */}
             <div className="flex items-center space-x-1 text-slate-500">
               <span>Source:</span>
-              <select
+              <Select
                 value={sourceFilter}
                 onChange={(e) => setSourceFilter(e.target.value)}
-                className="bg-slate-50 border border-slate-200 text-xs text-slate-700 font-medium rounded-lg px-2 py-1 focus:outline-none focus:border-emerald-500"
               >
                 <option value="ALL">All Sources</option>
                 <option value="manual">Manual Entry</option>
                 <option value="ocr_receipt">OCR Receipt</option>
                 <option value="bank_feed">Bank Feed</option>
                 <option value="csv_import">CSV Import</option>
-              </select>
+              </Select>
             </div>
 
             {/* Reversals Only Checkbox */}

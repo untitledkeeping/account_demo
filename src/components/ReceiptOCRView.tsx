@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button, IconButton, Input, Select, Badge as MoonBadge } from '@moondesignsystem/react';
 import {
   Receipt,
   UploadCloud,
@@ -95,9 +96,9 @@ export const ReceiptOCRView: React.FC<ReceiptOCRViewProps> = ({
             <h1 className="text-lg sm:text-xl font-bold text-slate-900">
               Receipt & Invoice OCR Ingestion
             </h1>
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-800 border border-slate-200">
+            <MoonBadge context="neutral" className="font-bold">
               {client.legalName}
-            </span>
+            </MoonBadge>
           </div>
 
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-2 text-xs text-slate-500">
@@ -114,13 +115,15 @@ export const ReceiptOCRView: React.FC<ReceiptOCRViewProps> = ({
           </div>
         </div>
 
-        <button
+        <Button
+          variant="primary"
+          size="sm"
           onClick={() => setIsUploadOpen(true)}
-          className="flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all shadow-xs min-h-[40px]"
+          className="!bg-emerald-600 hover:!bg-emerald-500 text-white font-bold flex items-center space-x-2"
         >
-          <UploadCloud className="w-4 h-4 stroke-[3]" />
+          <UploadCloud className="w-4 h-4 mr-1.5 stroke-[3]" />
           <span>Simulate Receipt Upload</span>
-        </button>
+        </Button>
       </div>
 
       {/* Main Split-Screen Workspace */}
@@ -201,14 +204,14 @@ export const ReceiptOCRView: React.FC<ReceiptOCRViewProps> = ({
                       {r.extractedDate}
                     </span>
                     {isPosted ? (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center space-x-1">
-                        <Check className="w-2.5 h-2.5" />
+                      <MoonBadge context="positive" className="flex items-center space-x-1 text-[10px]">
+                        <Check className="w-2.5 h-2.5 mr-0.5" />
                         <span>Posted</span>
-                      </span>
+                      </MoonBadge>
                     ) : (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      <MoonBadge context="caution" className="text-[10px]">
                         Needs Review
-                      </span>
+                      </MoonBadge>
                     )}
                   </div>
                 </div>
@@ -234,18 +237,20 @@ export const ReceiptOCRView: React.FC<ReceiptOCRViewProps> = ({
               </div>
 
               {selectedReceipt.status === 'posted' ? (
-                <div className="flex items-center space-x-1.5 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl border border-emerald-200 text-xs font-bold self-start sm:self-auto">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <MoonBadge context="positive" className="flex items-center space-x-1.5 self-start sm:self-auto">
+                  <CheckCircle2 className="w-4 h-4 mr-1 text-emerald-600" />
                   <span>Posted to General Ledger</span>
-                </div>
+                </MoonBadge>
               ) : (
-                <button
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={handlePostReceipt}
-                  className="flex items-center justify-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-xs min-h-[40px]"
+                  className="!bg-emerald-600 hover:!bg-emerald-500 text-white font-bold flex items-center space-x-1.5"
                 >
-                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  <Check className="w-3.5 h-3.5 mr-1 stroke-[3]" />
                   <span>Post to Ledger</span>
-                </button>
+                </Button>
               )}
             </div>
 
@@ -328,31 +333,31 @@ export const ReceiptOCRView: React.FC<ReceiptOCRViewProps> = ({
               <div className="space-y-3 text-xs">
                 <div className="space-y-1">
                   <label className="font-bold text-slate-500 uppercase text-[10px]">Vendor Name</label>
-                  <input
+                  <Input
                     type="text"
                     disabled
                     value={selectedReceipt.extractedVendor}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-semibold text-slate-800"
+                    className="font-semibold text-slate-800"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <label className="font-bold text-slate-500 uppercase text-[10px]">Date</label>
-                    <input
+                    <Input
                       type="text"
                       disabled
                       value={selectedReceipt.extractedDate}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-slate-800"
+                      className="font-mono text-slate-800"
                     />
                   </div>
                   <div className="space-y-1">
                     <label className="font-bold text-slate-500 uppercase text-[10px]">Total Amount</label>
-                    <input
+                    <Input
                       type="text"
                       disabled
                       value={formatCurrency(selectedReceipt.extractedTotal)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono font-bold text-slate-900"
+                      className="font-mono font-bold text-slate-900"
                     />
                   </div>
                 </div>
@@ -361,11 +366,11 @@ export const ReceiptOCRView: React.FC<ReceiptOCRViewProps> = ({
                   <label className="font-bold text-slate-500 uppercase text-[10px]">
                     Destination Account
                   </label>
-                  <select
+                  <Select
                     value={currentTargetAccountId}
                     onChange={(e) => handleSelectTargetAccount(selectedReceipt.id, e.target.value)}
                     disabled={selectedReceipt.status === 'posted'}
-                    className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-emerald-500 min-h-[38px]"
+                    className="font-semibold text-slate-800"
                   >
                     {accounts
                       .filter((a) => a.type === 'expense' || a.type === 'asset')
@@ -374,7 +379,7 @@ export const ReceiptOCRView: React.FC<ReceiptOCRViewProps> = ({
                           {acc.accountCode} - {acc.name}
                         </option>
                       ))}
-                  </select>
+                  </Select>
                 </div>
 
                 <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-[10px] text-slate-600 space-y-0.5">
@@ -409,12 +414,14 @@ export const ReceiptOCRView: React.FC<ReceiptOCRViewProps> = ({
                   <p className="text-[11px] text-slate-500">Multimodal vision with Canadian GST/HST/QST breakdown</p>
                 </div>
               </div>
-              <button
+              <IconButton
+                variant="ghost"
+                size="sm"
+                aria-label="Close"
                 onClick={() => setIsUploadOpen(false)}
-                className="text-slate-400 hover:text-slate-600 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors"
               >
                 <X className="w-4 h-4" />
-              </button>
+              </IconButton>
             </div>
 
             {isScanning ? (
@@ -511,40 +518,42 @@ export const ReceiptOCRView: React.FC<ReceiptOCRViewProps> = ({
                   <div className="font-bold text-slate-700">Option C: Custom Vendor & Amount</div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <input
+                      <Input
                         type="text"
                         placeholder="Vendor Name"
                         value={customVendor}
                         onChange={(e) => setCustomVendor(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-900 focus:outline-none focus:border-emerald-500 text-xs"
                       />
                     </div>
                     <div>
-                      <input
+                      <Input
                         type="number"
                         step="0.01"
                         placeholder="Total CAD"
                         value={customTotal}
                         onChange={(e) => setCustomTotal(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-slate-900 focus:outline-none focus:border-emerald-500 text-xs"
+                        className="font-mono"
                       />
                     </div>
                   </div>
 
                   <div className="flex justify-end space-x-2 pt-2">
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => setIsUploadOpen(false)}
-                      className="px-3.5 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-semibold"
                     >
                       Close
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="submit"
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold shadow-xs transition-colors"
+                      variant="primary"
+                      size="sm"
+                      className="!bg-emerald-600 hover:!bg-emerald-500 text-white font-bold"
                     >
                       Process Custom Invoice
-                    </button>
+                    </Button>
                   </div>
                 </form>
               </div>

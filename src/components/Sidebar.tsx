@@ -1,6 +1,7 @@
 // src/components/Sidebar.tsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Button, IconButton, Badge as MoonBadge } from '@moondesignsystem/react';
 import {
   Building2,
   BookOpen,
@@ -25,6 +26,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { ActiveTab, Firm, User } from '../types';
+
 
 interface SidebarProps {
   activeTab: ActiveTab;
@@ -170,20 +172,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           {/* Toggle Button Always Stays in Top Header */}
-          <button
+          <IconButton
+            variant="ghost"
+            context="neutral"
+            size="sm"
             onClick={onToggleCollapse}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
+            aria-label={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
             title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
           >
             {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          </button>
+          </IconButton>
         </div>
 
         {/* Wave-Style "+ Create New" Action Button */}
         <div className="p-3 pb-1 relative">
-          <button
+          <Button
+            variant="fill"
+            context="brand"
+            size="md"
             onClick={() => setIsCreateMenuOpen(!isCreateMenuOpen)}
-            className={`w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl flex items-center transition-colors shadow-xs ${
+            className={`w-full font-bold flex items-center shadow-xs ${
               isCollapsed
                 ? 'justify-center p-2.5 min-h-[38px]'
                 : 'justify-between px-3.5 py-2.5 text-xs min-h-[38px]'
@@ -195,7 +203,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {!isCollapsed && <span>Create New</span>}
             </div>
             {!isCollapsed && <ChevronDown className="w-3.5 h-3.5 text-emerald-200" />}
-          </button>
+          </Button>
 
           {/* Quick Create Dropdown Menu */}
           {isCreateMenuOpen && (
@@ -313,13 +321,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             </div>
 
                             {!isCollapsed && item.badge !== undefined && (
-                              <span
-                                className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                                  item.badgeColor || 'bg-slate-100 text-slate-700 border-slate-200'
-                                }`}
+                              <MoonBadge
+                                variant="soft"
+                                context="neutral"
+                                className="text-[10px] font-semibold px-2 py-0.5"
                               >
                                 {item.badge}
-                              </span>
+                              </MoonBadge>
                             )}
                           </button>
                         );

@@ -1,5 +1,6 @@
 // src/components/FirmOverview.tsx
 import React, { useState } from 'react';
+import { Button, IconButton, Input, Select, Badge as MoonBadge } from '@moondesignsystem/react';
 import {
   Building2,
   CheckCircle2,
@@ -26,6 +27,7 @@ import {
 } from 'lucide-react';
 import { Firm, ClientBusiness, BookkeepingStatus, User, ActiveTab } from '../types';
 import { useFirmOverview } from '../hooks/useFirmOverview';
+
 
 interface FirmOverviewProps {
   firm: Firm;
@@ -88,31 +90,31 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
       case 'Books Closed':
       case 'Up to Date':
         return (
-          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200/80">
+          <MoonBadge variant="soft" context="positive" className="inline-flex items-center space-x-1 font-bold">
             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
             <span>Up to Date</span>
-          </span>
+          </MoonBadge>
         );
       case 'Needs Review':
         return (
-          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-200">
+          <MoonBadge variant="soft" context="caution" className="inline-flex items-center space-x-1 font-bold">
             <AlertTriangle className="w-3 h-3 text-amber-600" />
             <span>Needs Review</span>
-          </span>
+          </MoonBadge>
         );
       case 'Awaiting Receipts':
         return (
-          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-200">
+          <MoonBadge variant="soft" context="info" className="inline-flex items-center space-x-1 font-bold">
             <Receipt className="w-3 h-3 text-purple-600" />
             <span>Awaiting Receipts</span>
-          </span>
+          </MoonBadge>
         );
       case 'Reconciliation Pending':
         return (
-          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-200">
+          <MoonBadge variant="soft" context="neutral" className="inline-flex items-center space-x-1 font-bold">
             <ArrowRightLeft className="w-3 h-3 text-orange-600" />
             <span>Recon Pending</span>
-          </span>
+          </MoonBadge>
         );
     }
   };
@@ -293,21 +295,20 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
           <div className="flex flex-wrap items-center gap-2.5">
             {/* Search Input */}
             <div className="relative w-full sm:w-64">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
+              <Input
                 type="text"
                 placeholder="Search clients, BN9, province..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 bg-slate-50/80 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500"
+                className="pl-8"
               />
             </div>
 
             {/* Staff Filter */}
-            <select
+            <Select
               value={bookkeeperFilter}
               onChange={(e) => setBookkeeperFilter(e.target.value)}
-              className="bg-slate-50/80 border border-slate-200 text-xs font-semibold text-slate-700 rounded-xl px-3 py-1.5 focus:outline-none focus:border-emerald-500"
             >
               <option value="ALL">All Staff</option>
               {uniqueBookkeepers.map((name) => (
@@ -315,20 +316,19 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
                   {name}
                 </option>
               ))}
-            </select>
+            </Select>
 
             {/* Status Filter */}
-            <select
+            <Select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-slate-50/80 border border-slate-200 text-xs font-semibold text-slate-700 rounded-xl px-3 py-1.5 focus:outline-none focus:border-emerald-500"
             >
               <option value="ALL">All Statuses</option>
               <option value="Up to Date">Up to Date</option>
               <option value="Needs Review">Needs Review</option>
               <option value="Reconciliation Pending">Recon Pending</option>
               <option value="Awaiting Receipts">Awaiting Receipts</option>
-            </select>
+            </Select>
           </div>
         </div>
 
@@ -524,35 +524,40 @@ export const FirmOverview: React.FC<FirmOverviewProps> = ({
           </div>
 
           <div className="flex items-center space-x-1">
-            <button
+            <IconButton
+              variant="ghost"
+              context="neutral"
+              size="sm"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Previous page"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
+            </IconButton>
 
             {Array.from({ length: totalPages }).map((_, idx) => (
-              <button
+              <Button
                 key={idx}
+                variant={currentPage === idx + 1 ? 'fill' : 'ghost'}
+                context={currentPage === idx + 1 ? 'brand' : 'neutral'}
+                size="sm"
                 onClick={() => setCurrentPage(idx + 1)}
-                className={`w-7 h-7 rounded-lg text-xs font-semibold transition-colors ${
-                  currentPage === idx + 1
-                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200/80 font-bold'
-                    : 'text-slate-600 hover:bg-white border border-transparent'
-                }`}
+                className="w-7 h-7 p-0 text-xs font-semibold"
               >
                 {idx + 1}
-              </button>
+              </Button>
             ))}
 
-            <button
+            <IconButton
+              variant="ghost"
+              context="neutral"
+              size="sm"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Next page"
             >
               <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+            </IconButton>
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 // src/components/FinancialReportsView.tsx
 import React from 'react';
+import { Button, IconButton, Input, Select, Badge as MoonBadge, Table } from '@moondesignsystem/react';
 import {
   BarChart3,
   Scale,
@@ -18,6 +19,7 @@ import {
   ArrowRight,
   TrendingUp,
 } from 'lucide-react';
+
 import { ClientBusiness, ChartOfAccount, JournalEntry } from '../types';
 import { formatCurrency } from '../utils/taxCalculator';
 import { useFinancialReports, ReportType, PeriodFilter } from '../hooks/useFinancialReports';
@@ -81,78 +83,79 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
 
         {/* Dual Export Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
-          <button
+          <Button
+            variant="fill"
+            context="brand"
+            size="sm"
             onClick={exportToPDF}
-            className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition-all shadow-xs min-h-[38px]"
+            className="flex items-center space-x-1.5 font-bold"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Export PDF / Print</span>
-          </button>
+          </Button>
 
-          <button
+          <Button
+            variant="outline"
+            context="neutral"
+            size="sm"
             onClick={exportToExcel}
             disabled={isExporting}
-            className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition-all shadow-xs min-h-[38px]"
+            className="flex items-center space-x-1.5 font-bold"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
             <span>{isExporting ? 'Exporting...' : 'Export Excel (CSV)'}</span>
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Statement Navigation Bar & Period Filter */}
       <div className="bg-white p-3 rounded-xl sm:rounded-2xl border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         {/* 4 Statement Tabs */}
-        <div className="flex flex-wrap items-center bg-slate-100 p-0.5 rounded-lg text-xs">
-          <button
+        <div className="flex flex-wrap items-center bg-slate-100 p-0.5 rounded-lg text-xs gap-1">
+          <Button
+            variant={reportType === 'pnl' ? 'fill' : 'ghost'}
+            context={reportType === 'pnl' ? 'brand' : 'neutral'}
+            size="sm"
             onClick={() => setReportType('pnl')}
-            className={`px-3 py-1.5 rounded-md font-bold transition-all min-h-[34px] ${
-              reportType === 'pnl'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className="font-bold"
           >
             Profit & Loss (P&L)
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={reportType === 'balance_sheet' ? 'fill' : 'ghost'}
+            context={reportType === 'balance_sheet' ? 'brand' : 'neutral'}
+            size="sm"
             onClick={() => setReportType('balance_sheet')}
-            className={`px-3 py-1.5 rounded-md font-bold transition-all min-h-[34px] ${
-              reportType === 'balance_sheet'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className="font-bold"
           >
             Balance Sheet
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={reportType === 'trial_balance' ? 'fill' : 'ghost'}
+            context={reportType === 'trial_balance' ? 'brand' : 'neutral'}
+            size="sm"
             onClick={() => setReportType('trial_balance')}
-            className={`px-3 py-1.5 rounded-md font-bold transition-all min-h-[34px] ${
-              reportType === 'trial_balance'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className="font-bold"
           >
             Trial Balance
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={reportType === 'gl_detail' ? 'fill' : 'ghost'}
+            context={reportType === 'gl_detail' ? 'brand' : 'neutral'}
+            size="sm"
             onClick={() => setReportType('gl_detail')}
-            className={`px-3 py-1.5 rounded-md font-bold transition-all min-h-[34px] ${
-              reportType === 'gl_detail'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className="font-bold"
           >
             GL Audit Trail
-          </button>
+          </Button>
         </div>
 
         {/* Period Selector */}
         <div className="flex items-center space-x-2 text-xs">
           <span className="text-slate-500 font-medium">Reporting Range:</span>
-          <select
+          <Select
             value={periodFilter}
             onChange={(e) => setPeriodFilter(e.target.value as PeriodFilter)}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold focus:outline-none focus:border-emerald-500"
           >
             <option value="YTD">Year-to-Date (YTD 2026)</option>
             <option value="Q1">Q1 (Jan - Mar 2026)</option>
@@ -160,7 +163,7 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
             <option value="Q3">Q3 (Jul - Sep 2026)</option>
             <option value="Q4">Q4 (Oct - Dec 2026)</option>
             <option value="ALL">All Cumulative History</option>
-          </select>
+          </Select>
         </div>
       </div>
 

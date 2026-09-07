@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Button, IconButton, Input, Select } from '@moondesignsystem/react';
 import {
   Plus,
   Trash2,
@@ -6,13 +7,11 @@ import {
   AlertCircle,
   Sparkles,
   X,
-  Building,
-  Calendar,
-  Layers,
   Check,
 } from 'lucide-react';
 import { ClientBusiness, ChartOfAccount, JournalEntry, LedgerLine, TaxCode, User } from '../types';
 import { calculateTaxFromSubtotal, formatCurrency } from '../utils/taxCalculator';
+
 
 interface NewJournalEntryModalProps {
   isOpen: boolean;
@@ -180,9 +179,15 @@ export const NewJournalEntryModal: React.FC<NewJournalEntryModalProps> = ({
             </div>
           </div>
 
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg">
-            <X className="w-5 h-5" />
-          </button>
+          <IconButton
+            variant="ghost"
+            context="neutral"
+            size="sm"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <X className="w-5 h-5 text-slate-400" />
+          </IconButton>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -190,24 +195,23 @@ export const NewJournalEntryModal: React.FC<NewJournalEntryModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1">Transaction Date</label>
-              <input
+              <Input
                 type="date"
                 required
                 value={entryDate}
                 onChange={(e) => setEntryDate(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-emerald-500"
+                className="font-mono"
               />
             </div>
 
             <div className="sm:col-span-2">
               <label className="text-xs font-bold text-slate-700 block mb-1">Memo / Description</label>
-              <input
+              <Input
                 type="text"
                 required
                 placeholder="e.g., Commercial Lease Mont-Royal or Invoice #4092"
                 value={memo}
                 onChange={(e) => setMemo(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
@@ -218,14 +222,17 @@ export const NewJournalEntryModal: React.FC<NewJournalEntryModalProps> = ({
               <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                 Compound Ledger Lines
               </label>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                context="brand"
+                size="sm"
                 onClick={handleAddLine}
-                className="text-xs font-semibold text-emerald-600 hover:text-emerald-500 flex items-center space-x-1"
+                className="font-semibold flex items-center space-x-1"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Line Item</span>
-              </button>
+              </Button>
             </div>
 
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -233,74 +240,76 @@ export const NewJournalEntryModal: React.FC<NewJournalEntryModalProps> = ({
                 <div key={idx} className="bg-slate-50 p-3 rounded-xl border border-slate-200 grid grid-cols-12 gap-2 items-center text-xs">
                   {/* Account Selector */}
                   <div className="col-span-12 sm:col-span-4">
-                    <select
+                    <Select
                       value={line.accountId}
                       onChange={(e) => handleUpdateLine(idx, 'accountId', e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-800 font-medium focus:outline-none focus:border-emerald-500"
                     >
                       {accounts.map((a) => (
                         <option key={a.id} value={a.id}>
                           {a.accountCode} - {a.name.slice(0, 24)}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
 
                   {/* Line Description */}
                   <div className="col-span-12 sm:col-span-3">
-                    <input
+                    <Input
                       type="text"
                       placeholder="Line detail..."
                       value={line.description}
                       onChange={(e) => handleUpdateLine(idx, 'description', e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-emerald-500"
                     />
                   </div>
 
                   {/* Debit CAD */}
                   <div className="col-span-5 sm:col-span-2">
-                    <input
+                    <Input
                       type="number"
                       step="0.01"
                       placeholder="Debit"
-                      value={line.debit === 0 ? '' : line.debit}
+                      value={line.debit === 0 ? '' : line.debit.toString()}
                       onChange={(e) => handleUpdateLine(idx, 'debit', parseFloat(e.target.value) || 0)}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-emerald-500 text-right"
+                      className="font-mono font-bold text-slate-900 text-right"
                     />
                   </div>
 
                   {/* Credit CAD */}
                   <div className="col-span-5 sm:col-span-2">
-                    <input
+                    <Input
                       type="number"
                       step="0.01"
                       placeholder="Credit"
-                      value={line.credit === 0 ? '' : line.credit}
+                      value={line.credit === 0 ? '' : line.credit.toString()}
                       onChange={(e) => handleUpdateLine(idx, 'credit', parseFloat(e.target.value) || 0)}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-emerald-500 text-right"
+                      className="font-mono font-bold text-slate-900 text-right"
                     />
                   </div>
 
                   {/* Action delete */}
                   <div className="col-span-2 sm:col-span-1 text-right flex justify-end space-x-1">
                     {line.debit > 0 && idx === 0 && (
-                      <button
-                        type="button"
+                      <IconButton
+                        variant="ghost"
+                        context="brand"
+                        size="sm"
                         onClick={() => handleAutoApplyTaxSplit(idx)}
                         title="Auto-calculate GST & QST splits"
-                        className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                        aria-label="Auto-calculate GST & QST splits"
                       >
-                        <Sparkles className="w-4 h-4" />
-                      </button>
+                        <Sparkles className="w-4 h-4 text-emerald-600" />
+                      </IconButton>
                     )}
-                    <button
-                      type="button"
+                    <IconButton
+                      variant="ghost"
+                      context="negative"
+                      size="sm"
                       onClick={() => handleRemoveLine(idx)}
                       disabled={lines.length <= 2}
-                      className="p-1 text-slate-400 hover:text-rose-600 disabled:opacity-30 rounded"
+                      aria-label="Delete line"
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <Trash2 className="w-4 h-4 text-slate-400 hover:text-rose-600" />
+                    </IconButton>
                   </div>
                 </div>
               ))}
@@ -335,21 +344,26 @@ export const NewJournalEntryModal: React.FC<NewJournalEntryModalProps> = ({
 
           {/* Actions */}
           <div className="flex items-center justify-end space-x-3 pt-2">
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              context="neutral"
+              size="sm"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant="fill"
+              context="brand"
+              size="sm"
               disabled={!isBalanced || !memo}
-              className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold px-5 py-2.5 rounded-xl text-xs transition-all shadow-md shadow-emerald-600/20"
+              className="flex items-center space-x-2 font-bold"
             >
               <Check className="w-4 h-4 stroke-[3]" />
               <span>Post to General Ledger</span>
-            </button>
+            </Button>
           </div>
         </form>
       </div>
